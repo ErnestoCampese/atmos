@@ -621,8 +621,8 @@ input[type=range]:disabled{cursor:not-allowed;--fill:var(--text3);--rail:var(--l
 /* ---------- the app's own dialog, in place of the browser's grey box ---------- */
 .scrim{position:fixed;inset:0;z-index:80;background:var(--scrim);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
   display:grid;place-items:center;padding:var(--s5);animation:fadein .16s ease}
-.dlg{width:min(480px,100%);max-height:calc(100vh - 48px);overflow:auto;background:var(--surface);border:1px solid var(--ctl);border-radius:var(--r-panel);
-  padding:var(--s5);box-shadow:0 30px 80px -20px var(--shadow);animation:rise .16s ease-out}
+.dlg{width:min(520px,100%);max-height:calc(100vh - 48px);overflow:auto;background:var(--surface);border:1px solid var(--ctl);border-radius:var(--r-panel);
+  padding:var(--s5);box-shadow:0 30px 80px -20px var(--shadow);animation:rise .16s ease-out;container-type:inline-size}
 @keyframes rise{from{opacity:0;transform:translateY(8px)}}
 .dlg h2{font-size:26px;line-height:1.25;margin-bottom:var(--s3)}
 .dlg p{margin:0 0 var(--s3);font-size:14px;color:var(--text2);line-height:1.55}
@@ -632,9 +632,13 @@ input[type=range]:disabled{cursor:not-allowed;--fill:var(--text3);--rail:var(--l
 .dlg .danger-line{display:flex;gap:var(--s2);align-items:flex-start;color:var(--warn);font-size:13px;font-weight:500;margin-bottom:var(--s4)}
 .dlg .danger-line svg{width:18px;height:18px;flex:none;margin-top:1px}
 .dlg .acts{display:flex;gap:var(--s3);align-items:center;flex-wrap:wrap}
+/* the spacer keeps clear space between the way out and the button that cannot be undone */
 .dlg .acts .spacer{flex:1;min-width:var(--s5)}
-/* clear space between the way out and the button that cannot be undone */
-.dlg .acts .danger.fill{margin-left:var(--s5)}
+/* too narrow for one row: one button per row, full width, the destructive one last */
+@container (max-width:459px){
+  .dlg .acts{flex-direction:column;align-items:stretch}
+  .dlg .acts .spacer{display:none}
+}
 
 /* thin scrollbars */
 ::-webkit-scrollbar{width:8px;height:8px}
