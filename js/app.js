@@ -2189,7 +2189,7 @@ $('changeFolder').onclick = pickFolder;
 $('newComp').onclick = newComposition;
 $('newComp2').onclick = newComposition;
 // below 1024 the library drops under the list: this is the mouse's way to it
-$('toLib').onclick = () => skipTo($('libPanel'), '.tabs button');
+$('toLib').onclick = () => skipTo($('libPanel'), '#libTabs button');
 // the four picture settings in immersion fold behind one pill, so the bar reads
 // as weather, settings, close
 $('immSetBtn').onclick = e => {
@@ -2255,8 +2255,8 @@ $('titleEdit').onclick = () => { const el = $('title'); el.focus(); el.select();
 $('search').oninput = renderLibrary;
 $('rescan').onclick = async () => { await scanLibrary(); renderLibrary(); toast('Library refreshed'); };
 $('exBtn').onclick = exportMix;
-document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
-  document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
+document.querySelectorAll('#libTabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('#libTabs button').forEach(x => x.classList.toggle('on', x === b));
   $('paneMine').hidden = b.dataset.tab !== 'mine';
   $('paneFs').hidden = b.dataset.tab !== 'fs';
   if (b.dataset.tab === 'fs' && fsKey) $('fsQ').focus();
@@ -2513,7 +2513,7 @@ const skipTo = (el, focusSel) => {
   const f = el.querySelector(focusSel);
   if (f) f.focus({ preventScroll: true });
 };
-$('skipLib').onclick = () => skipTo($('libPanel'), '.tabs button');
+$('skipLib').onclick = () => skipTo($('libPanel'), '#libTabs button');
 $('skipEx').onclick = () => skipTo($('exPanel'), 'select, button');
 
 /* Double-clicking the position slider puts the sound back in the centre. */

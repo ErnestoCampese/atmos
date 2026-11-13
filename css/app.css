@@ -434,12 +434,17 @@ a.icon{text-decoration:none}
 .val{color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap}
 
 .mode{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s3) var(--s4);padding-top:var(--s3);border-top:1px solid var(--line)}
-/* A 40 px track holding 32 px choices. Three words in a row need more air than a one-word
-   chip does, so these get 16 px either side rather than the chip's 12. */
+/* The segmented control: one row of choices, one of them selected. Every switch of this kind uses
+   it, with the same states everywhere. A 40 px track holding 32 px choices. Three words in a row
+   need more air than a one-word chip does, so these get 16 px either side rather than the chip's 12. */
 .seg{display:inline-flex;background:var(--raise);border:1px solid var(--ctl);border-radius:var(--r-sm);padding:3px;height:40px}
 .seg button{border:0;background:transparent;border-radius:var(--r-ctl);padding:0 var(--s4);font-size:13px;font-weight:600;color:var(--text2);transition:color .12s,background .12s}
 .seg button:hover:not(.on){color:var(--text);background:color-mix(in srgb,var(--surface) 70%,transparent)}
+.seg button:active:not(.on){background:var(--line)}
 .seg button.on{background:var(--surface);color:var(--text);box-shadow:0 1px 2px var(--shadow)}
+/* the same control across the full width, in equal shares */
+.seg.fill{display:flex}
+.seg.fill button{flex:1}
 .opts{display:flex;align-items:center;gap:var(--s2);font-size:13px;color:var(--text2);flex-wrap:wrap;min-height:32px}
 .opts input[type=range]{width:120px}
 .check{display:flex;align-items:center;gap:var(--s2);cursor:pointer;white-space:nowrap;height:32px}
@@ -549,10 +554,7 @@ input[type=range]:disabled{cursor:not-allowed;--fill:var(--text3);--rail:var(--l
 
 /* ---------- library ---------- */
 .lib{position:sticky;top:84px;max-height:calc(100vh - 104px);display:flex;flex-direction:column;padding:var(--s4)}
-.tabs{display:flex;background:var(--raise);border:1px solid var(--ctl);border-radius:var(--r-sm);padding:3px;margin-bottom:var(--s3);flex:none;height:40px}
-.tabs button{flex:1;border:0;background:transparent;border-radius:var(--r-ctl);font-size:14px;color:var(--text2);font-weight:600;transition:color .12s,background .12s}
-.tabs button:hover{color:var(--text)}
-.tabs button.on{background:var(--surface);color:var(--text);box-shadow:0 1px 2px var(--shadow)}
+.lib>.seg{margin-bottom:var(--s3);flex:none}
 .pane{display:flex;flex-direction:column;min-height:0;flex:1}
 .lib-head{display:flex;align-items:center;gap:var(--s2);margin-bottom:var(--s2)}
 .lib-head .search{margin:0}
