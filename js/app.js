@@ -61,7 +61,7 @@ const ICO = {
   copy: svg('<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a1 1 0 0 1 1-1h9"/>'),
   box: svg('<rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/>'),
   undo: svg('<path d="M4 9h11a5 5 0 0 1 0 10H9M4 9l4-4M4 9l4 4"/>'),
-  check: svg('<path d="m5 12.5 4.5 4.5L19 7"/>', 'fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"'),
+  check: svg('<path d="m5 12.5 4.5 4.5L19 7"/>', 'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"'),
   alert: svg('<path d="M12 4.5 2.8 20h18.4z"/><path d="M12 10v4M12 17.2v.3"/>'),
   plus: svg('<path d="M12 5v14M5 12h14"/>'),
   loop: svg('<path d="M7.5 9.5a3.2 3.2 0 1 1 0 5 15 15 0 0 1-2-2.5 15 15 0 0 0-2-2.5 3.2 3.2 0 1 0 0 5"/><path d="M16.5 9.5a3.2 3.2 0 1 1 0 5 15 15 0 0 1-2-2.5 15 15 0 0 0-2-2.5 3.2 3.2 0 1 0 0 5" transform="translate(-4.5)"/>'),
@@ -421,7 +421,7 @@ function renderHome() {
   const el = $('cards'); el.innerHTML = '';
   const live = comps.filter(c => !c.data.archived), arch = comps.filter(c => c.data.archived);
   $('homeEmpty').hidden = live.length > 0;
-  $('homeEmpty').textContent = arch.length
+  $('homeEmptyText').textContent = arch.length
     ? 'Everything you have is archived. Restore one below, or make a new composition.'
     : 'Nothing here yet. Make your first composition, give it a name, then add sounds to it.';
   live.forEach(c => el.appendChild(cardEl(c)));
@@ -512,7 +512,8 @@ function openCardMenu(c, card, btn) {
   });
   document.body.appendChild(m);
   const r = btn.getBoundingClientRect(), h = m.offsetHeight;
-  m.style.left = Math.max(8, Math.min(innerWidth - m.offsetWidth - 8, r.right - m.offsetWidth)) + 'px';
+  const host = (card || btn).getBoundingClientRect();
+  m.style.left = Math.max(8, Math.min(innerWidth - m.offsetWidth - 8, Math.max(host.left, r.right - m.offsetWidth))) + 'px';
   m.style.top = (r.bottom + 6 + h > innerHeight ? Math.max(8, r.top - 6 - h) : r.bottom + 6) + 'px';
   openMenu = m;
   const btns = [...m.querySelectorAll('button')];
@@ -624,7 +625,7 @@ async function deleteForever(c) {
   const actions = [];
   if (!c.data.archived) actions.push({ label: 'Archive instead', kind: 'ghost', icon: ICO.box, value: 'archive' });
   else actions.push({ label: 'Keep it archived', kind: 'ghost', value: null });
-  actions.push({ spacer: true }, { label: 'Cancel', kind: 'quiet', value: null }, { label: 'Delete forever', kind: 'danger fill', value: 'delete' });
+  actions.push({ label: 'Cancel', kind: 'quiet', value: null }, { spacer: true }, { label: 'Delete forever', kind: 'danger fill', value: 'delete' });
   const ans = await dialog({
     title: `Delete “${name}” forever?`,
     body: `<p>This removes ${files.length === 1 ? 'one file' : plural(files.length, 'file', 'files')} from your folder:</p>`,
@@ -792,7 +793,7 @@ function updateSaveUI() {
   if (saveFail) { p.classList.add('err'); mark = `<span class="alert">${ICO.alert}</span>`; words = 'Could not save'; when = saveFail; btn = 'Try again'; }
   else if (saving && cur.dirty) { p.classList.add('saving'); mark = '<span class="ring"></span>'; words = 'Saving…'; }
   else if (cur.dirty) { mark = '<span class="ring"></span>'; words = 'Unsaved changes'; btn = 'Save now'; }
-  else if (!cur.file) { mark = '<span class="ring"></span>'; words = 'Not saved yet'; btn = 'Save'; }
+  else if (!cur.file) { mark = '<span class="ring"></span>'; words = 'Not saved yet'; btn = 'Save now'; }
   else { mark = `<span class="tick">${ICO.check}</span>`; words = 'Saved'; when = agoText(cur.savedAt); }
   p.innerHTML = mark + `<span>${esc(words)}</span>` + (when ? `<span class="when">${esc(when)}</span>` : '');
   b.textContent = btn || 'Save';
@@ -1027,7 +1028,7 @@ function refreshGains() {
     t.nodes.gain.gain.setTargetAtTime(effectiveGain(t), ctx.currentTime, 0.05);
     if (t.el) t.el.classList.toggle('off', effectiveGain(t) === 0);
   });
-  updateWhyOff(); updateSoloNote(); updateLive();
+  updateWhyOff(); updateLive();
 }
 function updateLive() {
   if (!cur) return;
@@ -1038,6 +1039,7 @@ function updateLive() {
     const s = t.el.querySelector('.solo');
     if (s) s.classList.toggle('sounding', t.solo && playing);
   });
+  updateSoloNote();
 }
 function fadeLen(t, d) {
   if (t.mode === 'loop') return t.crossfade ? Math.min(t.fade, d / 3) : 0;
@@ -1348,8 +1350,8 @@ function renderTrack(t) {
       <span class="val fv">${t.fade} s</span>
     </div>` : `
     <div class="opts">
-      <label class="check"><input type="checkbox" class="cf" ${t.crossfade ? 'checked' : ''}> Crossfade the loop</label>
-      <input type="range" class="fade" min="0.5" max="10" step="0.5" value="${t.fade}" aria-label="Crossfade length" ${t.crossfade ? '' : 'disabled'}>
+      <label class="check"><input type="checkbox" class="cf" ${t.crossfade ? 'checked' : ''}> Blend</label>
+      <input type="range" class="fade" min="0.5" max="10" step="0.5" value="${t.fade}" aria-label="Blend length" ${t.crossfade ? '' : 'disabled'}>
       <span class="val fv">${t.fade} s</span>
     </div>`;
   const hfLabel = v => v ? v.toFixed(1).replace('.0', '') + ' s' : 'none';
@@ -1379,7 +1381,7 @@ function renderTrack(t) {
   const extra = {
     reverb: `<select class="revtype" title="Kind of space" aria-label="Kind of space">${options(SPACES, t.revType)}</select>`,
     echo: `<select class="revtype echotype" title="How far the echo is" aria-label="How far the echo is">${options(ECHOES, t.echoType)}</select>`,
-    trajectory: `<select class="revtype trajdir" title="Direction" aria-label="Direction">${options(TRAJ, t.trajDir, v => v)}</select><label class="fxcheck" title="Picks the direction by chance on every repeat"><input type="checkbox" class="trajrand" ${t.trajRand ? 'checked' : ''}> random</label>`
+    trajectory: `<select class="revtype trajdir" title="Direction" aria-label="Direction">${options(TRAJ, t.trajDir, v => v)}</select><label class="fxcheck" title="Picks the direction by chance on every repeat"><input type="checkbox" class="trajrand" ${t.trajRand ? 'checked' : ''}> Random</label>`
   };
   const saved = isSavedSound(t.name);
   el.innerHTML = `
@@ -1395,13 +1397,13 @@ function renderTrack(t) {
         <button class="icon imgdel" title="Remove the picture" aria-label="Remove the picture from this sound" ${t.img ? '' : 'hidden'}>${ICO.imageOff}</button>
       </div>
       <span class="dur">${dur}</span><span class="tdur">${dur}</span>
-      ${t.muted ? '<span class="why-off">muted</span>' : ''}
+      ${t.muted ? '<span class="why-off">silenced · muted</span>' : ''}
       <div class="btns">
         <button class="icon test ${t.pv ? 'on' : ''}" title="${t.pv ? 'Stop' : 'Listen to this sound on its own, over and over, while you adjust it'}" aria-pressed="${!!t.pv}" aria-label="${t.pv ? 'Stop listening to this sound on its own' : 'Listen to this sound on its own'}" ${t.buffer ? '' : 'disabled'}>${t.pv ? ICO.stop : ICO.play}</button>
         <button class="chip mute ${t.muted ? 'on' : ''}" title="Silence this sound" aria-label="Mute" aria-pressed="${t.muted}"><span class="w">Mute</span></button>
         <button class="chip solo ${t.solo ? 'on' : ''}" title="Play only this sound" aria-label="Solo" aria-pressed="${t.solo}"><span class="w">Solo</span></button>
         <button class="chip fxb ${t.fxOpen ? 'open' : ''}" title="Reverb, echo and more" aria-expanded="${!!t.fxOpen}">Effects${fxCount(t) ? `<span class="n">${fxCount(t)}</span>` : ''}</button>
-        <button class="chip seam ${t.seamless && t.mode === 'loop' ? 'on' : ''}" aria-label="Seamless loop" aria-pressed="${!!(t.seamless && t.mode === 'loop')}" title="${t.mode === 'loop' ? 'Seamless loop: joins the end to the start, with no gap' : 'Seamless loop: available in Continuous mode'}" ${t.mode === 'loop' && t.buffer ? '' : 'disabled'}><span class="w">Seamless</span></button>
+        ${t.mode === 'loop' ? `<button class="chip seam ${t.seamless ? 'on' : ''}" aria-label="Seamless loop" aria-pressed="${!!t.seamless}" title="Seamless loop: joins the end to the start, with no gap" ${t.buffer ? '' : 'disabled'}><span class="w">Seamless</span></button>` : ''}
         <button class="icon keep ${saved ? 'is-saved' : ''}" title="${saved ? 'Already saved in your sounds — save again to replace it' : 'Save this sound to your sounds, with its picture, effects and settings'}" aria-label="Save to your sounds">${saved ? ICO.keepOn : ICO.keep}</button>
         <button class="icon del" title="Remove from this composition" aria-label="Remove ${esc(t.name)} from this composition">${ICO.x}</button>
       </div>
@@ -1537,7 +1539,7 @@ function renderTrack(t) {
     el.querySelectorAll('.place').forEach(b => b.classList.toggle('on', b.dataset.p === now));
     applyFx(t); markDirty();
   });
-  q('.seam').onclick = e => {
+  if (q('.seam')) q('.seam').onclick = e => {
     const b = e.currentTarget;
     t.seamless = !t.seamless; b.classList.toggle('on', t.seamless);
     setTimeout(() => { applySeamless(t); replaceEl(t); markDirty(); }, 20);
@@ -1716,7 +1718,7 @@ function updateWhyOff() {
   const anySolo = cur.tracks.some(x => x.solo);
   cur.tracks.forEach(t => {
     if (!t.el) return;
-    const txt = t.muted ? 'muted' : (anySolo && !t.solo) ? 'silenced by solo' : '';
+    const txt = t.muted ? 'silenced · muted' : (anySolo && !t.solo) ? 'silenced · solo' : '';
     let s = t.el.querySelector('.why-off');
     if (!txt) { if (s) s.remove(); return; }
     if (!s) { s = document.createElement('span'); s.className = 'why-off'; const d = t.el.querySelector('.tdur'); if (d) d.after(s); }
@@ -1731,14 +1733,18 @@ function updateSoloNote() {
   if (!solo.length && !muted) { n.hidden = true; return; }
   n.hidden = false;
   n.innerHTML = '';
+  // gold is spent only on what is sounding: while the mix is stopped the name is ordinary text
+  n.classList.toggle('sounding', playing && solo.length > 0);
   if (solo.length) {
     const names = solo.map(t => t.name).join(', ');
-    n.insertAdjacentHTML('beforeend', `<span>Playing only <b>${esc(names)}</b></span>`);
+    n.insertAdjacentHTML('beforeend', playing
+      ? `<span>Playing only <b>${esc(names)}</b></span>`
+      : `<span>Only <b>${esc(names)}</b> will play</span>`);
     const go = document.createElement('button');
-    go.className = 'lnk'; go.textContent = 'Show';
+    go.className = 'quiet sm'; go.textContent = 'Show';
     go.onclick = () => { if (solo[0].el) solo[0].el.scrollIntoView({ behavior: 'smooth', block: 'center' }); };
     const clr = document.createElement('button');
-    clr.className = 'lnk'; clr.textContent = 'Clear solo';
+    clr.className = 'quiet sm'; clr.textContent = 'Clear solo';
     clr.onclick = () => { cur.tracks.forEach(t => { if (t.solo) { t.solo = false; if (t.el) { const b = t.el.querySelector('.solo'); b.classList.remove('on', 'sounding'); b.setAttribute('aria-pressed', 'false'); } } }); refreshGains(); markDirty(); };
     n.append(go, clr);
   }
@@ -1865,17 +1871,17 @@ async function putBackTrack() {
 
 /* ---------- library ---------- */
 const GROUPS = {
-  preset: ['With your settings', 'sounds you saved with the bookmark button, with their volume, filters and picture'],
-  own: ['Recordings', 'the audio files in your sounds folder'],
-  fs: ['From Freesound', 'sounds you fetched while making a composition']
+  preset: ['With your settings', 'Sounds you saved with the bookmark button, with their volume, effects and picture.'],
+  own: ['Recordings', 'The audio files in your sounds folder.'],
+  fs: ['From Freesound', 'Sounds you fetched while making a composition.']
 };
 const groupOf = i => i.preset ? 'preset' : i.fs ? 'fs' : 'own';
 function renderLibrary() {
   const q = $('search').value.trim().toLowerCase(), el = $('libList');
   el.innerHTML = '';
   if (!library.length) {
-    el.innerHTML = `<p class="hint">You have no sounds yet.<br><br>Drop audio files into the box below, or look for some
-      under <b>Freesound</b> above.</p>`;
+    el.innerHTML = `<p class="hint">You have no sounds yet.<br><br>Look for some under <b>Freesound</b> above,
+      or add your own files below.</p>`;
     return;
   }
   const items = library.filter(i => !q || (i.name + ' ' + i.path).toLowerCase().includes(q));
@@ -2179,6 +2185,17 @@ async function exportMix() {
 $('pickBtn').onclick = pickFolder;
 $('changeFolder').onclick = pickFolder;
 $('newComp').onclick = newComposition;
+$('newComp2').onclick = newComposition;
+// below 1024 the library drops under the list: this is the mouse's way to it
+$('toLib').onclick = () => skipTo($('libPanel'), '.tabs button');
+// the four picture settings in immersion fold behind one pill, so the bar reads
+// as weather, settings, close
+$('immSetBtn').onclick = e => {
+  const open = $('immSet').hidden;
+  $('immSet').hidden = !open;
+  e.currentTarget.classList.toggle('on', open);
+  e.currentTarget.setAttribute('aria-expanded', open);
+};
 $('backBtn').onclick = goBack;
 $('saveBtn').onclick = () => saveComp(true);
 $('playBtn').onclick = () => playing ? stop() : start();
