@@ -2521,5 +2521,13 @@ document.addEventListener('dblclick', e => {
   r.value = 0; paintRange(r); r.dispatchEvent(new Event('input', { bubbles: true }));
 });
 
+/* Keeps a copy of the app's own files so it opens without a connection, and lets it be
+   installed like an ordinary program. Only where the browser allows it: never from a page
+   opened straight off the disk. */
+if ('serviceWorker' in navigator &&
+    (location.protocol === 'https:' || ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname))) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+
 boot();
 })();
