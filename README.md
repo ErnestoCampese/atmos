@@ -128,15 +128,6 @@ you — particularly if you publish or sell what you make.
 
 Everything can be reached with `Tab`.
 
-## Coming from the Italian version
-
-An earlier version of this mixer used Italian folder names. The first time you open such a folder,
-αtmos offers to convert it: the folders are renamed (`suoni` → `sounds`, `composizioni` →
-`compositions`, `copertine` → `covers`…) and your compositions are rewritten in the current
-format. Nothing is thrown away.
-
-**Make a copy of the folder first**, as a safety net.
-
 ## For developers
 
 No build step, no dependencies, no framework. Open `index.html` directly, or serve the folder
