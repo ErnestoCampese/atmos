@@ -1,0 +1,41 @@
+# Personal sound libraries: private data, never part of the project
+Libreria/
+Library/
+
+# Never publish audio files or folders the app creates when a library is opened here
+*.mp3
+*.wav
+*.ogg
+*.oga
+*.flac
+*.m4a
+*.aac
+*.opus
+/sounds/
+/compositions/
+/covers/
+/presets/
+/exports/
+
+# The earlier Italian version, kept locally as a backup only
+index-old-italian.html
+
+# Working notes and development tools (tests, screenshots, review reports)
+CLAUDE_CODE_BRIEF.md
+.dev/
+.claude/
+node_modules/
+
+# Secrets
+.env
+.env.*
+*.key
+
+# Operating-system and editor clutter
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+.vscode/
+.idea/
