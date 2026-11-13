@@ -420,6 +420,9 @@ function renderHome() {
   const el = $('cards'); el.innerHTML = '';
   const live = comps.filter(c => !c.data.archived), arch = comps.filter(c => c.data.archived);
   $('homeEmpty').hidden = live.length > 0;
+  $('homeEmpty').textContent = arch.length
+    ? 'Everything you have is archived. Restore one below, or make a new composition.'
+    : 'Nothing here yet. Make your first composition, give it a name, then add sounds to it.';
   live.forEach(c => el.appendChild(cardEl(c)));
   renderArchive(arch);
 }
@@ -461,6 +464,8 @@ function renderArchive(arch) {
   box.hidden = !arch.length;
   if (!arch.length) return;
   $('archCount').textContent = arch.length;
+  try { box.open = localStorage.getItem('atmos-archive-open') === '1'; } catch (e) {}
+  box.ontoggle = () => { try { localStorage.setItem('atmos-archive-open', box.open ? '1' : '0'); } catch (e) {} };
   list.innerHTML = '';
   arch.forEach(c => {
     const n = c.data.name || 'Untitled';
