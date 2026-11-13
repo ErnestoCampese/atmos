@@ -2451,6 +2451,15 @@ if ('IntersectionObserver' in window) {
     { rootMargin: '-13px 0px 0px 0px', threshold: 0 }
   ).observe($('tSentinel'));
 }
+/* Two links, reachable only by keyboard, that jump past the long list of sounds. */
+const skipTo = (el, focusSel) => {
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const f = el.querySelector(focusSel);
+  if (f) f.focus({ preventScroll: true });
+};
+$('skipLib').onclick = () => skipTo($('libPanel'), '.tabs button');
+$('skipEx').onclick = () => skipTo($('exPanel'), 'select, button');
+
 /* Double-clicking the position slider puts the sound back in the centre. */
 document.addEventListener('dblclick', e => {
   const r = e.target.closest('input[type=range].pan');
