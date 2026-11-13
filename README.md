@@ -175,8 +175,7 @@ A composition is a JSON file like this:
 }
 ```
 
-`archived` is optional: a file without it counts as not archived. Files written by the older
-Italian version are read and converted on the fly.
+`archived` is optional: a file without it counts as not archived.
 
 ## Licence
 
