@@ -788,9 +788,9 @@ function updateSaveUI() {
   p.classList.remove('saving', 'err');
   let mark, words, when = '', btn = null;
   if (saveFail) { p.classList.add('err'); mark = `<span class="alert">${ICO.alert}</span>`; words = 'Could not save'; when = saveFail; btn = 'Try again'; }
-  else if (saving && cur.dirty) { p.classList.add('saving'); mark = '<span class="dot"></span>'; words = 'Saving…'; }
-  else if (cur.dirty) { mark = '<span class="dot"></span>'; words = 'Unsaved changes'; btn = 'Save now'; }
-  else if (!cur.file) { mark = '<span class="dot"></span>'; words = 'Not saved yet'; btn = 'Save'; }
+  else if (saving && cur.dirty) { p.classList.add('saving'); mark = '<span class="ring"></span>'; words = 'Saving…'; }
+  else if (cur.dirty) { mark = '<span class="ring"></span>'; words = 'Unsaved changes'; btn = 'Save now'; }
+  else if (!cur.file) { mark = '<span class="ring"></span>'; words = 'Not saved yet'; btn = 'Save'; }
   else { mark = `<span class="tick">${ICO.check}</span>`; words = 'Saved'; when = agoText(cur.savedAt); }
   p.innerHTML = mark + `<span>${esc(words)}</span>` + (when ? `<span class="when">${esc(when)}</span>` : '');
   b.textContent = btn || 'Save';

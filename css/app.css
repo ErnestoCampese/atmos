@@ -265,8 +265,10 @@ svg{flex:none}
 .title:hover{border-color:var(--ctl)}
 .title:focus{border-color:var(--text);background:var(--raise)}
 .title::placeholder{color:var(--muted);opacity:.8}
-.count{margin:var(--s2) 0 0;color:var(--text);font-size:14px;min-height:21px}
-.count .sep{color:var(--text2);margin:0 6px}
+/* named for the composition line only: "count" alone also matched the "About N times" field,
+   which then sat on a different line from the words beside it */
+.comp-meta{margin:var(--s2) 0 0;color:var(--text);font-size:14px;min-height:21px}
+.comp-meta .sep{color:var(--text2);margin:0 6px}
 
 /* The bar stays pinned while you scroll, and carries the one thing you must always be able to
    check — whether your work is saved. When pinned it sits on a solid strip, so nothing
@@ -304,11 +306,11 @@ svg{flex:none}
   background:color-mix(in srgb,var(--surface) 88%,transparent);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
   border:1px solid var(--ctl);color:var(--text);font-size:13px;font-weight:500;white-space:nowrap;transition:border-color .3s}
 .save-plate .when{color:var(--muted);font-weight:400}
-.save-plate .dot{width:12px;height:12px;border-radius:50%;border:2px solid var(--text);flex:none}
+.save-plate .ring{width:12px;height:12px;border-radius:50%;border:2px solid var(--text);flex:none}
 .save-plate .tick{width:20px;height:20px;border-radius:50%;background:var(--text);color:var(--bg);display:grid;place-items:center;flex:none}
 .save-plate .tick svg{width:12px;height:12px}
 .save-plate .alert{width:18px;height:18px;flex:none;color:var(--warn)}
-.save-plate.saving .dot{border-right-color:transparent;animation:spin .9s linear infinite}
+.save-plate.saving .ring{border-right-color:transparent;animation:spin .9s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .save-plate.err{border-color:var(--warn);color:var(--warn)}
 .save-plate.err .when{color:var(--warn)}
