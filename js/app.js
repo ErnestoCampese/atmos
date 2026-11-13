@@ -51,6 +51,7 @@ const ICO = {
   stop: svg('<rect x="6.5" y="6.5" width="11" height="11" rx="2"/>', 'fill="currentColor"'),
   x: svg('<path d="M6 6l12 12M18 6 6 18"/>'),
   image: svg('<rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-9 9"/>'),
+  imageOff: svg('<path d="M3 5.4V20h14.6"/><path d="M7 4h14v14"/><path d="m21 16-5-5-3 3"/><path d="M3.5 3.5l17 17"/>'),
   keep: svg('<path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"/>'),
   keepOn: svg('<path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"/>', 'fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"'),
   trash: svg('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>'),
@@ -676,6 +677,7 @@ const validTrack = j => !!j && typeof j === 'object' && typeof j.file === 'strin
 function enterEditor() {
   saveFail = null;
   $('title').value = cur.name;
+  sizeTitle();
   setMasterUI();
   master.gain.value = cur.volume;
   $('list').innerHTML = '';
@@ -1296,7 +1298,13 @@ function toggleFsPreview(s, btn) {
    (even when the sound is muted or another one is soloed). */
 function setTestBtn(t) {
   const b = t.el && t.el.querySelector('.test');
-  if (b) { b.classList.toggle('on', !!t.pv); b.innerHTML = t.pv ? ICO.stop : ICO.play; b.title = t.pv ? 'Stop the preview' : 'Preview this sound'; }
+  if (!b) return;
+  b.classList.toggle('on', !!t.pv);
+  b.innerHTML = t.pv ? ICO.stop : ICO.play;
+  b.title = t.pv ? 'Stop' : 'Listen to this sound on its own, over and over, while you adjust it';
+  // said out loud as well as shown, for anyone listening to the page rather than looking at it
+  b.setAttribute('aria-pressed', !!t.pv);
+  b.setAttribute('aria-label', t.pv ? 'Stop listening to this sound on its own' : 'Listen to this sound on its own');
 }
 function stopTrackTest(t) {
   if (!t.pv) return;
@@ -1376,6 +1384,7 @@ function renderTrack(t) {
   const saved = isSavedSound(t.name);
   el.innerHTML = `
     <div class="tbg"></div>
+    <button class="tclose" title="Close (Esc)">Done</button>
     <div class="top">
       <span class="grip" tabindex="0" role="button" title="Drag to reorder, or use the up and down arrows" aria-label="Move ${esc(t.name)}">${ICO.grip}</span>
       ${t.missing ? `<span class="dot miss" title="The audio file is missing">${ICO.alert}</span>` : '<span class="dot"></span>'}
@@ -1383,18 +1392,17 @@ function renderTrack(t) {
       <span class="tname">${esc(t.name)}</span>
       <div class="imgctl">
         <button class="icon imgown" title="${t.img ? 'Change the picture of this sound' : 'Add a picture to this sound (or drag one onto it, or paste it with Ctrl+V)'}" aria-label="Choose a picture for this sound">${ICO.image}</button>
-        <button class="icon imgdel" title="Remove the picture" aria-label="Remove the picture" ${t.img ? '' : 'hidden'}>${ICO.x}</button>
+        <button class="icon imgdel" title="Remove the picture" aria-label="Remove the picture from this sound" ${t.img ? '' : 'hidden'}>${ICO.imageOff}</button>
       </div>
       <span class="dur">${dur}</span><span class="tdur">${dur}</span>
       ${t.muted ? '<span class="why-off">muted</span>' : ''}
       <div class="btns">
-        <button class="icon test ${t.pv ? 'on' : ''}" title="${t.pv ? 'Stop' : 'Listen to this sound on its own, over and over, while you adjust it'}" aria-label="Listen to this sound on its own" ${t.buffer ? '' : 'disabled'}>${t.pv ? ICO.stop : ICO.play}</button>
+        <button class="icon test ${t.pv ? 'on' : ''}" title="${t.pv ? 'Stop' : 'Listen to this sound on its own, over and over, while you adjust it'}" aria-pressed="${!!t.pv}" aria-label="${t.pv ? 'Stop listening to this sound on its own' : 'Listen to this sound on its own'}" ${t.buffer ? '' : 'disabled'}>${t.pv ? ICO.stop : ICO.play}</button>
         <button class="chip mute ${t.muted ? 'on' : ''}" title="Silence this sound" aria-label="Mute" aria-pressed="${t.muted}"><span class="w">Mute</span></button>
         <button class="chip solo ${t.solo ? 'on' : ''}" title="Play only this sound" aria-label="Solo" aria-pressed="${t.solo}"><span class="w">Solo</span></button>
         <button class="chip fxb ${t.fxOpen ? 'open' : ''}" title="Reverb, echo and more" aria-expanded="${!!t.fxOpen}">Effects${fxCount(t) ? `<span class="n">${fxCount(t)}</span>` : ''}</button>
         <button class="chip seam ${t.seamless && t.mode === 'loop' ? 'on' : ''}" aria-label="Seamless loop" aria-pressed="${!!(t.seamless && t.mode === 'loop')}" title="${t.mode === 'loop' ? 'Seamless loop: joins the end to the start, with no gap' : 'Seamless loop: available in Continuous mode'}" ${t.mode === 'loop' && t.buffer ? '' : 'disabled'}><span class="w">Seamless</span></button>
         <button class="icon keep ${saved ? 'is-saved' : ''}" title="${saved ? 'Already saved in your sounds — save again to replace it' : 'Save this sound to your sounds, with its picture, effects and settings'}" aria-label="Save to your sounds">${saved ? ICO.keepOn : ICO.keep}</button>
-        <button class="tclose" title="Close (Esc)">Done</button>
         <button class="icon del" title="Remove from this composition" aria-label="Remove ${esc(t.name)} from this composition">${ICO.x}</button>
       </div>
     </div>
@@ -1461,7 +1469,15 @@ function renderTrack(t) {
     t.name = e.target.value.trim() || t.file.split('/').pop().replace(/\.[^.]+$/, '');
     e.target.value = t.name; markDirty();
   };
-  q('.imgdel').onclick = () => { t.img = null; paintTrackImage(t); markDirty(); };
+  // like every other destructive action, taking a picture away can be undone
+  q('.imgdel').onclick = () => {
+    const was = t.img;
+    t.img = null; paintTrackImage(t); markDirty();
+    toast('Picture removed', { action: 'Undo', onAction: () => {
+      if (!cur || !cur.tracks.includes(t)) return;
+      t.img = was; paintTrackImage(t); markDirty();
+    } });
+  };
   q('.imgown').onclick = () => { imgTarget = t; $('trackImgIn').click(); };
   el.addEventListener('dragover', e => { if ([...e.dataTransfer.items].some(i => i.type.startsWith('image/'))) { e.preventDefault(); el.classList.add('imgdrop'); } });
   // reordering: drag by the handle
@@ -2167,14 +2183,19 @@ $('backBtn').onclick = goBack;
 $('saveBtn').onclick = () => saveComp(true);
 $('playBtn').onclick = () => playing ? stop() : start();
 $('master').oninput = e => { cur.volume = e.target.value / 100; master.gain.setTargetAtTime(cur.volume, ctx.currentTime, 0.05); setMasterUI(); markDirty(); };
-$('title').oninput = markDirty;
+$('title').oninput = () => { sizeTitle(); markDirty(); };
 $('coverBtn').onclick = () => $('coverIn').click();
 $('coverChange').onclick = () => $('coverIn').click();
 $('coverRemove').onclick = () => {
   if (!cur) return;
+  const was = { cover: cur.cover, pending: cur.coverPending, url: cur.coverUrl }, c = cur;
   cur.cover = null; cur.coverPending = null; cur.coverUrl = null;
   setCover(null); markDirty();
-  toast('Cover removed. The picture file stays in your folder.');
+  toast('Cover removed — the picture file stays in your folder', { action: 'Undo', onAction: () => {
+    if (cur !== c) return;
+    cur.cover = was.cover; cur.coverPending = was.pending; cur.coverUrl = was.url;
+    setCover(cur.coverUrl); markDirty();
+  } });
 };
 $('coverIn').onchange = e => {
   const f = e.target.files[0]; e.target.value = '';
@@ -2201,6 +2222,17 @@ $('relinkIn').onchange = async e => {
     toast('Found it. The sound keeps all its settings.');
   } catch (e2) { toast('Couldn\'t copy that file into your folder.'); }
 };
+/* A long title is made smaller rather than cut off mid-word, and the full text is always
+   there as a tooltip. The pencil beside it is how you find out it can be renamed at all. */
+function sizeTitle() {
+  const el = $('title'), n = el.value.length;
+  el.classList.toggle('t-long', n > 38 && n <= 56);
+  el.classList.toggle('t-xlong', n > 56 && n <= 72);
+  el.classList.toggle('t-xxlong', n > 72);
+  el.title = el.value;
+}
+$('titleEdit').innerHTML = ICO.pencil;
+$('titleEdit').onclick = () => { const el = $('title'); el.focus(); el.select(); };
 $('search').oninput = renderLibrary;
 $('rescan').onclick = async () => { await scanLibrary(); renderLibrary(); toast('Library refreshed'); };
 $('exBtn').onclick = exportMix;
