@@ -11,7 +11,9 @@ is no account, and there is nothing to install unless you want to.
 
 **[Use it →](https://ernestocampese.github.io/atmos/)**
 
-<!-- screenshots -->
+![Your compositions, each with its own cover](assets/screenshots/compositions.png)
+
+![A composition open, playing, with the effects panel showing its ready-made places](assets/screenshots/editor.png)
 
 ---
 

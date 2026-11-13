@@ -272,7 +272,7 @@ svg{flex:none;width:16px;height:16px}
    and a pencil beside it says, at rest, that it can be changed. A long one shrinks rather
    than being cut off in the middle of a word. */
 .title-row{display:flex;align-items:center;gap:var(--s2)}
-.title{flex:0 1 auto;min-width:0;border:1px solid transparent;background:transparent;font-family:var(--display);font-style:italic;font-size:52px;font-weight:300;letter-spacing:-.015em;line-height:1.3;
+.title{flex:1;min-width:0;border:1px solid transparent;background:transparent;font-family:var(--display);font-style:italic;font-size:52px;font-weight:300;letter-spacing:-.015em;line-height:1.3;
   padding:0 var(--s2);margin-left:-9px;border-radius:var(--r-ctl);text-overflow:ellipsis;
   transition:background .12s,border-color .12s,font-size .15s}
 .title.t-long{font-size:38px;line-height:1.32}
