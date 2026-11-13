@@ -902,8 +902,9 @@ const fxWord = v => v === 0 ? 'Off' : v < 34 ? 'A little' : v < 67 ? 'Medium' : 
    it is the same seven effects, chosen for you. */
 const noFx = () => ({ reverb: 0, echo: 0, muffled: 0, thin: 0, waves: 0, movement: 0, trajectory: 0 });
 const place = (fx, revType, echoType) => ({ fx: Object.assign(noFx(), fx), revType: revType || 'cathedral', echoType: echoType || 'valley' });
+/* The first is not a place but the way back: every effect off, the reverb and echo types left as they are. */
 const PLACES = [
-  ['here', 'Right here', place({})],
+  ['none', 'No effects', { fx: noFx() }],
   ['near', 'A step away', place({ reverb: 22, muffled: 12 }, 'room')],
   ['window', 'Behind a window', place({ muffled: 66, reverb: 20, thin: 12 }, 'room')],
   ['hall', 'In a big room', place({ reverb: 48 }, 'hall')],
@@ -1426,7 +1427,7 @@ function renderTrack(t) {
     <div class="fxp" ${t.fxOpen ? '' : 'hidden'}>
       <div class="fx-places">
         <p>Put this sound…</p>
-        <div class="chips">${PLACES.map(([id, label]) => `<button class="chip place${placeOf(t) === id ? ' on' : ''}" data-p="${id}">${esc(label)}</button>`).join('')}</div>
+        <div class="chips">${PLACES.map(([id, label]) => `<button class="chip place${placeOf(t) === id ? ' on' : ''}" data-p="${id}">${esc(label)}</button>${id === 'none' ? '<span class="chips-sep" aria-hidden="true"></span>' : ''}`).join('')}</div>
       </div>
       <div class="grid">
         ${FILTERS.map(([k, label, hint]) => `
@@ -1452,7 +1453,8 @@ function renderTrack(t) {
   el.querySelectorAll('.place').forEach(b => b.onclick = () => {
     const p = PLACES.find(x => x[0] === b.dataset.p)[2];
     FILTER_KEYS.forEach(k => t.fx[k] = p.fx[k]);
-    t.revType = p.revType; t.echoType = p.echoType;
+    if (p.revType) t.revType = p.revType;
+    if (p.echoType) t.echoType = p.echoType;
     setReverbType(t); applyFx(t);
     replaceEl(t); markDirty();
   });

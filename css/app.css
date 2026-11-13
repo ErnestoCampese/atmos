@@ -464,6 +464,8 @@ input[type=checkbox]:disabled{border-color:var(--line);background:var(--raise);c
 .fx-places p{margin:0 0 var(--s2);font-size:13px;color:var(--text2)}
 .fx-places .chips{display:flex;flex-wrap:wrap;gap:var(--s2)}
 .fx-places .place{padding:0 var(--s3)}
+/* "No effects" is a reset, not a place: a thin rule sets it apart, with the row's own gap on each side */
+.fx-places .chips-sep{width:1px;height:var(--s5);align-self:center;background:color-mix(in srgb,var(--ctl) 60%,transparent)}
 .fxcheck{display:inline-flex;align-items:center;gap:var(--s2);height:32px;font-size:12px;cursor:pointer}
 select.revtype{font-size:12px;height:32px;padding:0 24px 0 var(--s2);border-radius:var(--r-ctl);background-position:right 8px center}
 

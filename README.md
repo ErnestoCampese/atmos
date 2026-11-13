@@ -90,9 +90,10 @@ own way of playing:
 - **At intervals** — it plays every so many seconds.
 - **Random** — it plays at unpredictable moments, roughly as often as you ask.
 
-**Effects** opens a panel that begins with nine ready-made places, such as *Behind a window*,
+**Effects** opens a panel that begins with eight ready-made places, such as *Behind a window*,
 *In a cathedral*, *Across a valley* or *Under water*. Pick one and the sliders beneath move to
-match; from there you can adjust anything by hand. The ▶ button on a
+match; from there you can adjust anything by hand. *No effects*, set apart before them, turns
+every effect off. The ▶ button on a
 sound plays that sound on its own, over and over, so you can hear a change as you make it.
 
 ## Freesound
