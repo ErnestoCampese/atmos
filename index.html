@@ -45,15 +45,16 @@
     <div class="welcome">
       <h1 class="wordmark"><span aria-hidden="true"><b>α</b>tmos</span><span class="sr">Atmos</span></h1>
       <p class="tagline">Compose your own atmosphere.</p>
-      <p class="lead">Layer rain, wind, voices and distant bells into a soundscape, then let it play.
-        To begin, choose a folder on this computer. Everything you make is kept there:
-        sounds in <code>sounds</code>, compositions in <code>compositions</code>,
-        cover images in <code>covers</code> and exported files in <code>exports</code>.
-        Nothing is uploaded.</p>
+      <p class="lead" id="welcomeLead">Layer rain, wind, voices and distant bells into a soundscape, then let it play.
+        <br><br>To begin, <b>make a new empty folder on this computer</b> — for example one called
+        <code>Atmos</code> inside your Documents — and choose it below. Your browser will ask whether
+        αtmos may see and change that folder: answer yes. Everything you make is kept there, and
+        nothing is uploaded.</p>
       <div class="actions">
-        <button class="primary" id="reopenBtn" hidden>Reopen “<span id="reopenName"></span>”</button>
-        <button class="primary" id="pickBtn">Choose a folder</button>
+        <button class="primary lg" id="reopenBtn" hidden>Reopen “<span id="reopenName"></span>”</button>
+        <button class="primary lg" id="pickBtn">Choose a folder</button>
       </div>
+      <p class="fine" id="welcomeFine">Has someone given you an αtmos folder already? Choose that one instead.</p>
       <p class="status" id="welcomeStatus" aria-live="polite" hidden></p>
       <p class="note" id="unsupported" hidden>This browser can't work with folders on your computer. Open this page in Google Chrome or Microsoft Edge on a desktop or laptop.</p>
     </div>
@@ -76,32 +77,47 @@
       <button class="primary" id="newComp">New composition</button>
     </div>
     <div class="cards" id="cards"></div>
-    <p class="empty" id="homeEmpty">No compositions yet. Create one to get started.</p>
+    <p class="empty" id="homeEmpty" hidden>Nothing here yet. Make your first composition, give it a name, then add sounds to it.</p>
+    <!-- archived compositions: nothing is moved or deleted, they are simply out of the way -->
+    <details class="arch" id="arch" hidden>
+      <summary class="arch-head" id="archHead">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg>
+        Archived <span class="count" id="archCount"></span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </summary>
+      <div class="arch-list" id="archList"></div>
+    </details>
   </section>
 
   <!-- editor -->
   <section id="vEditor" hidden>
+    <a class="ghost sm skip" href="#libPanel" id="skipLib">Skip to your sounds</a>
+    <a class="ghost sm skip" href="#exPanel" id="skipEx">Skip to export</a>
     <div class="ed-top">
       <button class="back" id="backBtn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
         Compositions
       </button>
-      <div class="row">
-        <span class="status" id="saveStatus" aria-live="polite"></span>
-        <button class="primary sm" id="saveBtn">Save</button>
-      </div>
     </div>
     <div class="ed-head">
-      <button class="cover" id="coverBtn" title="Choose a cover image" aria-label="Choose a cover image"><img id="coverImg" alt="" hidden><span id="coverPh">Add a<br>cover</span></button>
-      <input type="file" id="coverIn" accept="image/*" hidden>
-      <input type="file" id="trackImgIn" accept="image/*" hidden>
+      <div class="cover-wrap">
+        <button class="cover" id="coverBtn" title="Choose a cover image" aria-label="Choose a cover image"><img id="coverImg" alt="" hidden><span id="coverPh">Add a<br>cover</span></button>
+        <div class="cover-acts" id="coverActs" hidden>
+          <button id="coverChange">Change</button>
+          <button id="coverRemove">Remove</button>
+        </div>
+      </div>
+      <input type="file" id="coverIn" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" hidden>
+      <input type="file" id="trackImgIn" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" hidden>
+      <input type="file" id="relinkIn" accept="audio/*,.mp3,.wav,.ogg,.flac,.m4a" hidden>
       <div class="grow">
-        <input class="title" id="title" placeholder="Untitled" spellcheck="false" aria-label="Title of the composition">
+        <input class="title" id="title" placeholder="Name your composition" spellcheck="false" aria-label="Title of the composition">
         <p class="count" id="compMeta"></p>
       </div>
     </div>
 
-    <div class="transport">
+    <div id="tSentinel"></div>
+    <div class="transport" id="transport">
       <button class="play" id="playBtn" aria-label="Play">
         <svg id="icoPlay" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg>
         <svg id="icoStop" viewBox="0 0 24 24" fill="currentColor" hidden><rect x="6.5" y="6.5" width="11" height="11" rx="2"/></svg>
@@ -112,69 +128,88 @@
         <input type="range" id="master" min="0" max="100" value="80" aria-label="Master volume">
         <span class="val" id="masterVal">80%</span>
       </div>
-      <button class="imm-open" id="immBtn" title="A full-window backdrop with your cover and a weather effect of your choice">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
-        <span>Immersion</span>
-      </button>
+      <div class="tbar-end">
+        <button class="imm-open" id="immBtn" title="A full-window backdrop with your cover and a weather effect of your choice">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+          <span>Immersion</span>
+        </button>
+        <div class="save-plate" id="savePlate" aria-live="polite"></div>
+        <button class="ghost" id="saveBtn">Save</button>
+      </div>
+      <div class="solo-note" id="soloNote" hidden></div>
     </div>
 
     <div class="ed-grid">
       <div>
         <div class="viewbar">
           <h2>Sounds</h2>
+          <input class="search find" id="findSound" placeholder="Find a sound" aria-label="Find a sound in this composition" hidden>
           <div class="seg" id="viewSeg" role="group" aria-label="View">
             <button data-v="rows" title="One sound per row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Rows</button>
             <button data-v="tiles" title="Tiles: click a tile to open it"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>Tiles</button>
           </div>
         </div>
         <div class="list" id="list"></div>
-        <p class="empty" id="empty">Add sounds from your library with the + button. Start with a continuous base, like rain or a waterfall.</p>
+        <p class="empty" id="empty">No sounds yet. Add one from <b>Your sounds</b> on the right — start with something continuous, like rain or a waterfall.</p>
 
-        <section class="panel export">
+        <section class="panel export" id="exPanel">
           <h2>Export as a file</h2>
-          <p>Creates a WAV file of the mix and saves it in the <code>exports</code> folder.</p>
+          <p>Creates a sound file (WAV) of the mix and saves it in your <code>exports</code> folder. You can play it in any music player.</p>
           <div class="row">
             <select id="exDur" aria-label="Length of the file">
-              <option value="1">1 minute</option>
-              <option value="3" selected>3 minutes</option>
-              <option value="5">5 minutes</option>
-              <option value="10">10 minutes</option>
+              <option value="1">1 minute · about 12 MB</option>
+              <option value="3" selected>3 minutes · about 35 MB</option>
+              <option value="5">5 minutes · about 58 MB</option>
+              <option value="10">10 minutes · about 115 MB</option>
             </select>
             <label class="check"><input type="checkbox" id="exFade" checked> Fade in and out</label>
-            <button class="primary sm" id="exBtn">Create WAV file</button>
-            <span class="status" id="exStatus" aria-live="polite"></span>
+            <button class="primary sm" id="exBtn">Create the file</button>
           </div>
+          <div class="row" id="exBusy" hidden style="margin-top:var(--s3)">
+            <span class="status">Creating the file…</span>
+            <span class="ex-prog"><i></i></span>
+          </div>
+          <p class="status" id="exStatus" aria-live="polite" style="margin-top:var(--s3)"></p>
         </section>
       </div>
 
-      <aside class="panel lib">
+      <aside class="panel lib" id="libPanel">
         <div class="tabs">
-          <button data-tab="mine" class="on">My sounds</button>
+          <button data-tab="mine" class="on">Your sounds</button>
           <button data-tab="fs">Freesound</button>
         </div>
 
         <div class="pane" id="paneMine">
           <div class="lib-head">
-            <input class="search" id="search" placeholder="Search your library" aria-label="Search your library">
-            <button class="icon" id="rescan" title="Refresh the library" aria-label="Refresh the library"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.3-4.4L4 8.5M4 4v4.5h4.5M4 13a8 8 0 0 0 14.3 4.4l1.7-1.9M20 20v-4.5h-4.5"/></svg></button>
+            <input class="search" id="search" placeholder="Search your sounds" aria-label="Search your sounds">
+            <button class="icon" id="rescan" title="Refresh this list" aria-label="Refresh this list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.3-4.4L4 8.5M4 4v4.5h4.5M4 13a8 8 0 0 0 14.3 4.4l1.7-1.9M20 20v-4.5h-4.5"/></svg></button>
           </div>
           <div class="libList" id="libList"></div>
           <label class="drop" id="drop">
             <input type="file" id="fileIn" accept="audio/*,.mp3,.wav,.ogg,.flac,.m4a" multiple hidden>
-            Drop new audio files here, or click to choose<br><small>they are copied into the sounds folder</small>
+            Drop audio files here, or click to choose<br><small>they are copied into your sounds folder</small>
           </label>
         </div>
 
         <div class="pane" id="paneFs" hidden>
           <div class="pane" id="fsKeyBox">
-            <p class="small">Searching Freesound needs a free key. Create an account, request a key at
-              <a href="https://freesound.org/apiv2/apply" target="_blank" rel="noopener">freesound.org/apiv2/apply</a>,
-              then paste the “Client secret/Api key” value here. It is kept only in this browser.</p>
-            <input class="search" id="fsKeyIn" placeholder="Paste your key" autocomplete="off" aria-label="Freesound key">
+            <p class="small">Freesound is a website of sounds shared by people around the world. To search it from here you
+              need your own free key. This is done once:</p>
+            <ol class="steps">
+              <li>Open <a href="https://freesound.org" target="_blank" rel="noopener">freesound.org</a> and create a free account.</li>
+              <li>Open <a href="https://freesound.org/apiv2/apply" target="_blank" rel="noopener">this page</a> and fill in the short form — any name and description will do.</li>
+              <li>Copy the long code shown under “Client secret/Api key” and paste it below.</li>
+            </ol>
+            <input class="search" id="fsKeyIn" placeholder="Paste your key here" autocomplete="off" aria-label="Freesound key">
             <button class="primary sm" id="fsKeySave">Save key</button>
+            <button class="quiet sm" id="fsKeyCancel" hidden style="align-self:flex-start;margin-top:var(--s2)">Cancel</button>
+            <p class="small" id="fsKeyMsg" aria-live="polite" hidden></p>
           </div>
           <div class="pane" id="fsMain" hidden>
-            <form id="fsForm"><input class="search" id="fsQ" placeholder="Search Freesound: rain, fire, wind…" aria-label="Search Freesound"></form>
+            <form id="fsForm" class="fs-search">
+              <input class="search" id="fsQ" placeholder="Search Freesound: rain, fire, wind…" aria-label="Search Freesound">
+              <button class="ghost" id="fsGo" type="submit">Search</button>
+            </form>
             <div class="fs-filters">
               <select id="fsSort" class="full" title="Sort">
                 <option value="score">Sort: most relevant</option>
@@ -192,11 +227,11 @@
               </select>
               <select id="fsLic" title="Licence">
                 <option value="">Any licence</option>
-                <option value='license:"Creative Commons 0"'>CC0 only (free to use)</option>
-                <option value='license:("Creative Commons 0" OR "Attribution")'>OK for commercial use</option>
+                <option value='license:"Creative Commons 0"'>Free to use, no credit needed</option>
+                <option value='license:("Creative Commons 0" OR "Attribution")'>Allowed for commercial use</option>
               </select>
             </div>
-            <div class="libList" id="fsList"><p class="hint">Search for a sound and add it with +. It is saved in sounds/freesound, with its author in credits.txt.</p></div>
+            <div class="libList" id="fsList"><p class="hint">Search for a sound and add it with +. It is saved in your sounds folder, and its author is recorded alongside it.</p></div>
             <button class="ghost sm" id="fsMore" hidden>More results</button>
             <button class="linkbtn" id="fsKeyReset">Change key</button>
           </div>
@@ -212,15 +247,17 @@
   <div class="imm-shade"></div>
   <canvas id="immFx"></canvas>
   <div class="imm-top imm-fade">
-    <div class="fx-chips" id="fxChips"></div>
-    <button class="imm-btn" id="immFillBtn" title="Enlarges the image until it covers the whole window (the edges may be cropped)">Fill the window</button>
-    <button class="imm-btn" id="immPixelBtn" title="Keeps pixels crisp: ideal for pixel-art images">Pixel art</button>
-    <button class="imm-btn" id="immCoverBtn" hidden>Use the cover</button>
-    <button class="imm-btn" id="immBgBtn">Change background</button>
-    <button class="imm-btn" id="immFsBtn" title="Also hides the browser's own bars (F)">Full screen</button>
-    <button class="imm-btn" id="immExit" title="Close (Esc)" aria-label="Close immersion"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    <div class="fx-chips" id="fxChips" role="group" aria-label="Weather effect"></div>
+    <div class="imm-set">
+      <button class="imm-btn" id="immFillBtn" title="Enlarges the image until it covers the whole window (the edges may be cropped)">Fill the window</button>
+      <button class="imm-btn" id="immPixelBtn" title="Keeps pixels crisp: ideal for pixel-art images">Pixel art</button>
+      <button class="imm-btn" id="immCoverBtn" hidden>Use the cover</button>
+      <button class="imm-btn" id="immBgBtn">Change background</button>
+      <button class="imm-btn" id="immFsBtn" title="Also hides the browser's own bars (F)">Full screen</button>
+    </div>
+    <button class="imm-btn imm-close" id="immExit" title="Close (Esc)" aria-label="Close immersion"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
   </div>
-  <input type="file" id="immBgIn" accept="image/*" hidden>
+  <input type="file" id="immBgIn" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" hidden>
   <div class="imm-center">
     <p class="imm-title imm-fade" id="immTitle"></p>
     <button class="imm-play" id="immPlay" aria-label="Play">
@@ -230,7 +267,8 @@
     <input type="range" class="imm-vol imm-fade" id="immVol" min="0" max="100" value="80" aria-label="Master volume">
   </div>
 </div>
-<div class="toast" id="toast" role="status"></div>
+<div class="toast" id="toast" role="status"><span class="t-msg" id="toastMsg"></span><button class="t-act" id="toastAct" hidden></button></div>
+<div id="dialogs"></div>
 
 <script src="js/app.js"></script>
 </body>

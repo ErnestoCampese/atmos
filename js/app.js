@@ -13,6 +13,7 @@ const CREDITS = DIR.freesound + '/credits.txt';
 
 let root = null;        // the chosen folder
 let library = [];       // [{path, name}]
+let audioPaths = new Set();   // every audio file in the folder, to spot a sound whose file has gone
 let comps = [];         // [{file, data, coverUrl, mod}]
 let cur = null;         // the open composition
 let playing = false, timer = null, startedAt = 0, stopToken = 0;
@@ -24,26 +25,102 @@ const r2 = x => Math.round(x * 100) / 100;
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = s => { s = Math.max(0, Math.floor(s)); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = String(s % 60).padStart(2, '0'); return h ? `${h}:${String(m).padStart(2, '0')}:${x}` : `${m}:${x}`; };
 const slug = s => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'untitled';
-const hue = s => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
 const num = (v, d, lo, hi) => { v = Number(v); return Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d; };
 const pick = (v, obj, d) => typeof v === 'string' && Object.prototype.hasOwnProperty.call(obj, v) ? v : d;
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 const cssUrl = u => `url("${String(u).replace(/["\\\n\r]/g, c => encodeURIComponent(c))}")`;
-function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('show'), 3200); }
+/* A message at the bottom of the window. With an action (Undo…) it stays longer and can be clicked. */
+let toastT = null;
+function toast(msg, opts) {
+  const o = opts || {}, t = $('toast'), act = $('toastAct');
+  $('toastMsg').textContent = msg;
+  act.hidden = !o.action;
+  t.classList.toggle('has-act', !!o.action);
+  if (o.action) { act.textContent = o.action; act.onclick = () => { hideToast(); o.onAction(); }; }
+  t.classList.add('show');
+  clearTimeout(toastT);
+  toastT = setTimeout(hideToast, o.ms || (o.action ? 8000 : 3400));
+}
+function hideToast() { clearTimeout(toastT); $('toast').classList.remove('show', 'has-act'); }
 function show(v) { ['vWelcome', 'vHome', 'vEditor'].forEach(id => $(id).hidden = id !== v); $('atmo').hidden = v !== 'vEditor'; $('sky').dataset.view = v; window.scrollTo(0, 0); }
 
 /* icons */
-const svg = (d, o = 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"') => `<svg viewBox="0 0 24 24" ${o} aria-hidden="true">${d}</svg>`;
+const svg = (d, o = 'fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"') => `<svg viewBox="0 0 24 24" ${o} aria-hidden="true">${d}</svg>`;
 const ICO = {
   play: svg('<path d="M8 5.5v13l11-6.5z"/>', 'fill="currentColor"'),
   stop: svg('<rect x="6.5" y="6.5" width="11" height="11" rx="2"/>', 'fill="currentColor"'),
   x: svg('<path d="M6 6l12 12M18 6 6 18"/>'),
   image: svg('<rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-9 9"/>'),
-  keep: svg('<path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"/><path d="M12 7v6M9 10h6"/>'),
+  keep: svg('<path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"/>'),
+  keepOn: svg('<path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"/>', 'fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"'),
   trash: svg('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>'),
   link: svg('<path d="M8 16 16 8M9 8h7v7"/>'),
+  more: svg('<circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none"/>'),
+  pencil: svg('<path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3z"/>'),
+  copy: svg('<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a1 1 0 0 1 1-1h9"/>'),
+  box: svg('<rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/>'),
+  undo: svg('<path d="M4 9h11a5 5 0 0 1 0 10H9M4 9l4-4M4 9l4 4"/>'),
+  check: svg('<path d="m5 12.5 4.5 4.5L19 7"/>', 'fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"'),
+  alert: svg('<path d="M12 4.5 2.8 20h18.4z"/><path d="M12 10v4M12 17.2v.3"/>'),
+  plus: svg('<path d="M12 5v14M5 12h14"/>'),
+  loop: svg('<path d="M7.5 9.5a3.2 3.2 0 1 1 0 5 15 15 0 0 1-2-2.5 15 15 0 0 0-2-2.5 3.2 3.2 0 1 0 0 5"/><path d="M16.5 9.5a3.2 3.2 0 1 1 0 5 15 15 0 0 1-2-2.5 15 15 0 0 0-2-2.5 3.2 3.2 0 1 0 0 5" transform="translate(-4.5)"/>'),
   grip: '<svg viewBox="0 0 10 16" fill="currentColor" aria-hidden="true"><circle cx="3" cy="3" r="1.3"/><circle cx="7" cy="3" r="1.3"/><circle cx="3" cy="8" r="1.3"/><circle cx="7" cy="8" r="1.3"/><circle cx="3" cy="13" r="1.3"/><circle cx="7" cy="13" r="1.3"/></svg>'
 };
+
+/* ---------- the app's own dialog ----------
+   The browser's confirm() box cannot name the files, cannot offer a third, gentler choice, and
+   confirms on Enter. Every question the app asks uses this instead.
+   opts: { title, body (html), files:[], danger, actions:[{label, kind, value, icon}] }
+   Resolves with the chosen action's value, or null if cancelled. */
+function dialog(opts) {
+  return new Promise(resolve => {
+    const prev = document.activeElement;
+    const scrim = document.createElement('div');
+    scrim.className = 'scrim';
+    scrim.innerHTML = `<div class="dlg" role="dialog" aria-modal="true" aria-label="${esc(opts.title)}">
+      <h2>${esc(opts.title)}</h2>
+      ${opts.body || ''}
+      ${opts.files && opts.files.length ? `<div class="files">${opts.files.map(f => `<div>${ICO.trash}<span>${esc(f)}</span></div>`).join('')}</div>` : ''}
+      ${opts.after || ''}
+      ${opts.danger ? `<p class="danger-line">${ICO.alert}<span>${esc(opts.danger)}</span></p>` : ''}
+      <div class="acts"></div></div>`;
+    const acts = scrim.querySelector('.acts');
+    (opts.actions || []).forEach(a => {
+      if (a.spacer) { const s = document.createElement('span'); s.className = 'spacer'; acts.appendChild(s); return; }
+      const b = document.createElement('button');
+      b.className = a.kind || 'ghost';
+      b.innerHTML = (a.icon ? a.icon : '') + `<span>${esc(a.label)}</span>`;
+      b.onclick = () => done(a.value);
+      acts.appendChild(b);
+    });
+    const done = v => {
+      document.removeEventListener('keydown', onKey, true);
+      scrim.remove();
+      if (prev && prev.isConnected) try { prev.focus(); } catch (e) {}
+      resolve(v);
+    };
+    const onKey = e => {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done(null); return; }
+      if (e.key !== 'Tab') return;
+      // the keyboard stays inside the dialog while it is open
+      const f = [...scrim.querySelectorAll('button')];
+      if (!f.length) return;
+      const i = f.indexOf(document.activeElement);
+      e.preventDefault();
+      f[(i + (e.shiftKey ? -1 : 1) + f.length) % f.length].focus();
+    };
+    scrim.onclick = e => { if (e.target === scrim) done(null); };
+    document.addEventListener('keydown', onKey, true);
+    $('dialogs').appendChild(scrim);
+    // the focus starts on the safe choice, so pressing Enter out of habit never destroys anything
+    const safe = scrim.querySelector('.acts button:not(.danger)') || scrim.querySelector('.acts button');
+    if (safe) safe.focus();
+  });
+}
+const confirmDlg = (title, body, okLabel, o) => dialog(Object.assign({
+  title, body: body ? `<p>${body}</p>` : '',
+  actions: [{ label: 'Cancel', kind: 'quiet', value: null }, { label: okLabel, kind: 'danger fill', value: true }]
+}, o || {})).then(v => v === true);
 /* sliders: the filled part shows the value; "position" fills outwards from the centre */
 function paintRange(el) {
   const min = +el.min || 0, max = el.max === '' ? 100 : +el.max, p = max > min ? (el.value - min) / (max - min) * 100 : 0;
@@ -207,7 +284,12 @@ async function boot() {
   const h = await kv.get('root');
   if (h) {
     $('reopenName').textContent = h.name; $('reopenBtn').hidden = false;
-    $('pickBtn').textContent = 'Choose another folder'; $('pickBtn').className = 'ghost';
+    // a returning visitor should not be read the instructions for a first visit
+    $('welcomeLead').innerHTML = `Welcome back. Your compositions are in the folder <b>${esc(h.name)}</b>.
+      <br><br>For your privacy, the browser asks you to open that folder again each time you come here.`;
+    $('welcomeFine').hidden = true;
+    $('pickBtn').textContent = 'Choose another folder'; $('pickBtn').className = 'ghost lg';
+    setTimeout(() => { try { $('reopenBtn').focus(); } catch (e) {} }, 0);
     $('reopenBtn').onclick = async () => {
       try { if (await h.requestPermission({ mode: 'readwrite' }) === 'granted') await useFolder(h); }
       catch (e) { toast('Couldn\'t open that folder. Choose it again.'); }
@@ -223,9 +305,13 @@ async function pickFolder() {
 async function useFolder(h) {
   const legacy = await findLegacyDirs(h);
   if (legacy.length) {
-    if (!confirm('This folder was made with the earlier Italian version of the mixer.\n\nTo use it here its folders need their English names (suoni → sounds, composizioni → compositions, copertine → covers…). All your sounds, compositions and images are kept.\n\nConvert this folder now?')) {
-      toast('Nothing was changed. Choose a different folder to continue.'); return;
-    }
+    const ok = await dialog({
+      title: 'This folder was made with the earlier Italian version',
+      body: `<p>To use it here, its folders need their English names (suoni → sounds, composizioni → compositions,
+        copertine → covers…). All your sounds, compositions and images are kept.</p>`,
+      actions: [{ label: 'Not now', kind: 'quiet', value: false }, { label: 'Convert this folder', kind: 'primary', value: true }]
+    });
+    if (!ok) { toast('Nothing was changed. Choose a different folder to continue.'); return; }
     show('vWelcome');
     let n = 0;
     const st = $('welcomeStatus'); st.hidden = false; st.textContent = 'Converting your library…';
@@ -238,20 +324,31 @@ async function useFolder(h) {
   for (const d of [DIR.sounds, DIR.comps, DIR.covers, DIR.presets]) await root.getDirectoryHandle(d, { create: true });
   $('folderName').textContent = h.name;
   await scanLibrary(); await loadComps(); renderHome(); show('vHome');
+  // coming back to an address that names a composition reopens it
+  const want = decodeURIComponent((location.hash || '').replace(/^#/, ''));
+  const c = want && comps.find(x => compId(x) === want);
+  if (c) openComp(c, true);
 }
 
+// a name like "my recording.wav.mp3" should read "my recording", not "my recording.wav"
+const stripExt = s => String(s).replace(/\.[^.]+$/, '').replace(/\.(wav|aiff?|mp3|flac|ogg|oga|m4a|aac|opus)$/i, '');
 async function scanLibrary() {
-  const out = [];
+  const out = [], fromFs = [];
+  audioPaths = new Set();
   const walk = async (dir, prefix) => {
     for await (const [name, h] of dir.entries()) {
-      // sounds downloaded from Freesound are kept for the compositions but not listed in the library:
-      // the library shows only the files you added yourself and the sounds you saved
-      if (h.kind === 'directory') { if (!(prefix === DIR.sounds + '/' && name === 'freesound')) await walk(h, prefix + name + '/'); }
-      else if (AUDIO_RE.test(name)) out.push({ path: prefix + name, name: name.replace(/\.[^.]+$/, '') });
+      const fsDir = prefix === DIR.sounds + '/' && name === 'freesound';
+      if (h.kind === 'directory') { await walk(h, prefix + name + '/'); continue; }
+      if (!AUDIO_RE.test(name)) continue;
+      const path = prefix + name;
+      audioPaths.add(path);
+      // sounds fetched from Freesound are listed too, under their own heading, so one can be used again
+      (prefix === DIR.freesound + '/' ? fromFs : out).push({ path, name: stripExt(name), fs: prefix === DIR.freesound + '/' });
     }
   };
   await walk(await dirAt(DIR.sounds), DIR.sounds + '/');
   out.sort((a, b) => a.path.localeCompare(b.path));
+  fromFs.sort((a, b) => a.name.localeCompare(b.name));
   // saved sounds: one JSON file each, in the presets folder
   const pre = [];
   for await (const [name, h] of (await dirAt(DIR.presets)).entries()) {
@@ -262,7 +359,7 @@ async function scanLibrary() {
     } catch (e) {}
   }
   pre.sort((a, b) => a.name.localeCompare(b.name));
-  library = [...pre, ...out];
+  library = [...pre, ...out, ...fromFs];
 }
 const presetImgs = new Map();   // image path → address ready to display
 function presetImage(item, row) {
@@ -285,6 +382,8 @@ function cleanComp(raw) {
   const im = d.immersion && typeof d.immersion === 'object' ? d.immersion : {};
   const str = v => typeof v === 'string' && v ? v : null;
   return { version: 2, name: typeof d.name === 'string' ? d.name : '', cover: str(d.cover), masterVolume: num(d.masterVolume, 0.8, 0, 1),
+    // "archived" is optional and new: a file written before it existed simply counts as not archived
+    archived: !!d.archived,
     immersion: { effect: typeof im.effect === 'string' ? im.effect : 'fireflies', background: str(im.background), pixelArt: !!im.pixelArt, fill: !!im.fill },
     tracks: (Array.isArray(d.tracks) ? d.tracks : []).map(upgradeTrack).filter(validTrack) };
 }
@@ -304,22 +403,245 @@ async function loadComps() {
   }
   comps = list.sort((a, b) => b.mod - a.mod);
 }
+/* A composition with no picture of its own gets one of four inks, chosen from its name. */
+const coverIdx = s => { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) % 9973; return h % 4; };
+function editedText(ms) {
+  if (!ms) return '';
+  const d = new Date(ms), day = x => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = Math.round((day(new Date()) - day(d)) / 86400000);
+  if (diff <= 0) return 'edited today';
+  if (diff === 1) return 'edited yesterday';
+  if (diff < 7) return `edited ${diff} days ago`;
+  return 'edited ' + d.toLocaleDateString(undefined, { day: 'numeric', month: 'long' });
+}
+const missingCount = c => c.data.tracks.filter(t => audioPaths.size && !audioPaths.has(t.file)).length;
+
 function renderHome() {
   const el = $('cards'); el.innerHTML = '';
-  $('homeEmpty').hidden = comps.length > 0;
-  comps.forEach(c => {
-    const n = c.data.name || 'Untitled', k = c.data.tracks.length;
-    const b = document.createElement('button'); b.className = 'card';
-    b.innerHTML = `<span class="frame" style="--h:${hue(n)}"><span class="halo"></span><span class="art">${c.coverUrl ? `<img src="${c.coverUrl}" alt="">` : `<span>${esc(n.charAt(0).toUpperCase())}</span>`}</span></span>
-      <div class="meta"><strong>${esc(n)}</strong><small>${plural(k, 'sound', 'sounds')}</small></div>`;
-    if (c.coverUrl) b.querySelector('.halo').style.setProperty('--img', cssUrl(c.coverUrl));
-    b.onclick = () => openComp(c);
-    el.appendChild(b);
+  const live = comps.filter(c => !c.data.archived), arch = comps.filter(c => c.data.archived);
+  $('homeEmpty').hidden = live.length > 0;
+  live.forEach(c => el.appendChild(cardEl(c)));
+  renderArchive(arch);
+}
+function cardEl(c) {
+  const n = c.data.name || 'Untitled', k = c.data.tracks.length, miss = missingCount(c);
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.dataset.c = coverIdx(n);
+  card.innerHTML = `<button class="open" aria-label="Open ${esc(n)}">
+      <span class="frame"><span class="halo"></span><span class="art">${c.coverUrl ? `<img src="${c.coverUrl}" alt="">` : `<span>${esc(n.charAt(0).toUpperCase())}</span>`}</span></span>
+    </button>
+    <div class="meta">
+      <button class="title-open" tabindex="-1">
+        <strong class="${c.data.name ? '' : 'untitled'}" title="${esc(n)}">${esc(n)}</strong>
+        <small>${plural(k, 'sound', 'sounds')}${c.mod ? ' · ' + esc(editedText(c.mod)) : ''}</small>
+        ${miss ? `<small class="warn-line">${esc(plural(miss, 'sound', 'sounds'))} missing</small>` : ''}
+      </button>
+      <button class="more" aria-haspopup="true" aria-label="More actions for ${esc(n)}">${ICO.more}</button>
+    </div>`;
+  if (c.coverUrl) card.querySelector('.halo').style.setProperty('--img', cssUrl(c.coverUrl));
+  card.querySelector('.open').onclick = () => openComp(c);
+  card.querySelector('.title-open').onclick = () => openComp(c);
+  const more = card.querySelector('.more');
+  more.onclick = e => { e.stopPropagation(); openCardMenu(c, card, more); };
+  card.oncontextmenu = e => { e.preventDefault(); openCardMenu(c, card, more); };
+  card.addEventListener('keydown', e => {
+    if (e.target.closest('input')) return;
+    const k = e.key;
+    if (k === 'F2') { e.preventDefault(); startRename(c, card); }
+    else if (k === 'Delete' && e.shiftKey) { e.preventDefault(); deleteForever(c); }
+    else if (k === 'Delete') { e.preventDefault(); setArchived(c, true); }
+    else if ((e.ctrlKey || e.metaKey) && k.toLowerCase() === 'd') { e.preventDefault(); duplicateComp(c); }
+    else if (k === 'ContextMenu' || (e.shiftKey && k === 'F10')) { e.preventDefault(); openCardMenu(c, card, more); }
   });
+  return card;
+}
+function renderArchive(arch) {
+  const box = $('arch'), list = $('archList');
+  box.hidden = !arch.length;
+  if (!arch.length) return;
+  $('archCount').textContent = arch.length;
+  list.innerHTML = '';
+  arch.forEach(c => {
+    const n = c.data.name || 'Untitled';
+    const row = document.createElement('div');
+    row.className = 'arch-item';
+    row.dataset.c = coverIdx(n);
+    row.innerHTML = `<span class="thumb">${c.coverUrl ? `<img src="${c.coverUrl}" alt="">` : `<span>${esc(n.charAt(0).toUpperCase())}</span>`}</span>
+      <span class="an"><strong title="${esc(n)}">${esc(n)}</strong><small>${plural(c.data.tracks.length, 'sound', 'sounds')}${c.mod ? ' · ' + esc(editedText(c.mod)) : ''}</small></span>
+      <button class="ghost sm restore">${ICO.undo}<span>Restore</span></button>
+      <button class="quiet sm del-forever" style="color:var(--warn)">Delete forever…</button>`;
+    row.querySelector('.restore').onclick = () => setArchived(c, false);
+    row.querySelector('.del-forever').onclick = () => deleteForever(c);
+    list.appendChild(row);
+  });
+}
+
+/* ---------- managing a composition from the list ---------- */
+let openMenu = null;
+function closeMenu() { if (openMenu) { openMenu.remove(); openMenu = null; } }
+document.addEventListener('pointerdown', e => { if (openMenu && !e.target.closest('.menu')) closeMenu(); });
+window.addEventListener('resize', closeMenu);
+window.addEventListener('scroll', closeMenu, true);
+function openCardMenu(c, card, btn) {
+  closeMenu();
+  const m = document.createElement('div');
+  m.className = 'menu';
+  m.setAttribute('role', 'menu');
+  const items = [
+    { label: 'Rename', icon: ICO.pencil, key: 'F2', run: () => startRename(c, card) },
+    { label: 'Duplicate', icon: ICO.copy, key: 'Ctrl+D', run: () => duplicateComp(c) },
+    { label: c.data.archived ? 'Restore' : 'Archive', icon: c.data.archived ? ICO.undo : ICO.box, run: () => setArchived(c, !c.data.archived) },
+    { sep: true },
+    { label: 'Delete forever…', icon: ICO.trash, danger: true, run: () => deleteForever(c) }
+  ];
+  items.forEach(it => {
+    if (it.sep) { m.appendChild(document.createElement('hr')); return; }
+    const b = document.createElement('button');
+    b.setAttribute('role', 'menuitem');
+    b.className = it.danger ? 'danger-item' : '';
+    b.innerHTML = it.icon + `<span>${esc(it.label)}</span>` + (it.key ? `<span class="key">${it.key}</span>` : '');
+    b.onclick = () => { closeMenu(); it.run(); };
+    m.appendChild(b);
+  });
+  document.body.appendChild(m);
+  const r = btn.getBoundingClientRect(), h = m.offsetHeight;
+  m.style.left = Math.max(8, Math.min(innerWidth - m.offsetWidth - 8, r.right - m.offsetWidth)) + 'px';
+  m.style.top = (r.bottom + 6 + h > innerHeight ? Math.max(8, r.top - 6 - h) : r.bottom + 6) + 'px';
+  openMenu = m;
+  const btns = [...m.querySelectorAll('button')];
+  btns[0].focus();
+  m.addEventListener('keydown', e => {
+    const i = btns.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown') { e.preventDefault(); btns[(i + 1) % btns.length].focus(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); btns[(i - 1 + btns.length) % btns.length].focus(); }
+    else if (e.key === 'Home') { e.preventDefault(); btns[0].focus(); }
+    else if (e.key === 'End') { e.preventDefault(); btns[btns.length - 1].focus(); }
+    else if (e.key === 'Escape' || e.key === 'Tab') { e.preventDefault(); closeMenu(); btn.focus(); }
+  });
+}
+/* the title becomes a field in place; the saved file follows the title, as it does in the editor */
+function startRename(c, card) {
+  if (card.classList.contains('renaming')) return;
+  const holder = card.querySelector('.title-open');
+  const old = holder.innerHTML;
+  card.classList.add('renaming');
+  holder.innerHTML = `<input class="rename-in" value="${esc(c.data.name || '')}" aria-label="Name of the composition" spellcheck="false">
+    <span class="rename-hint">Enter to save · Esc to cancel</span>`;
+  const inp = holder.querySelector('input');
+  inp.focus(); inp.select();
+  let done = false;
+  const finish = async ok => {
+    if (done) return; done = true;
+    const name = inp.value.trim();
+    card.classList.remove('renaming');
+    holder.innerHTML = old;
+    if (!ok || !name || name === c.data.name) return;
+    const twin = comps.find(x => x !== c && (x.data.name || '') === name);
+    await renameComp(c, name);
+    renderHome();
+    toast(`Renamed to “${name}”`);
+    if (twin) setTimeout(() => toast(`You already have a composition called “${name}”.`, { ms: 6000 }), 600);
+  };
+  inp.onkeydown = e => {
+    if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+    else if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+  };
+  inp.onblur = () => finish(true);
+}
+// writes the file under a name made from the new title, exactly as the editor does
+async function renameComp(c, name) {
+  try {
+    const data = Object.assign({}, c.data, { name });
+    const oldFile = c.file;
+    const oldBase = oldFile.split('/').pop().replace(/\.json$/i, ''), want = slug(name);
+    const keep = oldBase === want || (oldBase.replace(/-\d+$/, '') === want && await exists(`${DIR.comps}/${want}.json`));
+    const file = keep ? oldFile : await freeName(DIR.comps, want, '.json');
+    await writeFile(file, JSON.stringify(data, null, 2));
+    if (file !== oldFile) { const [d, n] = split(oldFile); try { await (await dirAt(d, false)).removeEntry(n); } catch (e) {} }
+    c.file = file; c.data = data; c.mod = Date.now();
+  } catch (e) { toast('Couldn\'t rename it. Check that the folder is still there.'); }
+}
+async function writeComp(c, data) {
+  await writeFile(c.file, JSON.stringify(data, null, 2));
+  c.data = data; c.mod = Date.now();
+}
+/* Archiving moves nothing and deletes nothing: the file gains one small marker. */
+async function setArchived(c, on) {
+  try {
+    await writeComp(c, Object.assign({}, c.data, { archived: on }));
+    renderHome();
+    toast(`“${c.data.name || 'Untitled'}” ${on ? 'archived' : 'restored'}`,
+      { action: 'Undo', onAction: () => setArchived(c, !on) });
+    if (on) { const a = $('arch'); if (a && !a.open) a.open = true; }
+  } catch (e) { toast('Couldn\'t change it. Check that the folder is still there.'); }
+}
+async function duplicateComp(c) {
+  try {
+    const name = (c.data.name || 'Untitled') + ' copy';
+    const file = await freeName(DIR.comps, slug(name), '.json');
+    const base = file.split('/').pop().replace(/\.json$/i, '');
+    const data = Object.assign({}, c.data, { name, archived: false });
+    // the copy gets its own picture files: deleting one composition must never strip another's cover
+    data.cover = await copyAsset(c.data.cover, base);
+    data.immersion = Object.assign({}, c.data.immersion, { background: await copyAsset(c.data.immersion.background, base + '-background') });
+    await writeFile(file, JSON.stringify(data, null, 2));
+    let coverUrl = null;
+    if (data.cover) { try { coverUrl = URL.createObjectURL(await readFile(data.cover)); } catch (e) {} }
+    const copy = { file, data, coverUrl, mod: Date.now() };
+    comps.unshift(copy);
+    renderHome();
+    const card = [...$('cards').children].find(el => el.querySelector('strong').textContent === name);
+    if (card) { card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); startRename(copy, card); }
+    toast('Copied. Give the copy a name.');
+  } catch (e) { toast('Couldn\'t copy it. Check that the folder is still there.'); }
+}
+async function copyAsset(path, base) {
+  if (!path) return null;
+  try {
+    const f = await readFile(path);
+    const ext = (path.match(/\.[^.]+$/) || ['.jpg'])[0].toLowerCase();
+    const p = await freeName(DIR.covers, base, ext);
+    await writeFile(p, f);
+    return p;
+  } catch (e) { return null; }
+}
+/* Deleting for good names every file it will remove, and offers the gentler choice instead. */
+async function deleteForever(c) {
+  const name = c.data.name || 'Untitled';
+  const others = comps.filter(x => x !== c);
+  const used = p => !!p && others.some(x => x.data.cover === p || x.data.immersion.background === p);
+  const files = [c.file];
+  if (c.data.cover && !used(c.data.cover)) files.push(c.data.cover);
+  if (c.data.immersion.background && c.data.immersion.background !== c.data.cover && !used(c.data.immersion.background)) files.push(c.data.immersion.background);
+  const shared = [c.data.cover, c.data.immersion.background].filter(p => p && used(p));
+  const actions = [];
+  if (!c.data.archived) actions.push({ label: 'Archive instead', kind: 'ghost', icon: ICO.box, value: 'archive' });
+  else actions.push({ label: 'Keep it archived', kind: 'ghost', value: null });
+  actions.push({ spacer: true }, { label: 'Cancel', kind: 'quiet', value: null }, { label: 'Delete forever', kind: 'danger fill', value: 'delete' });
+  const ans = await dialog({
+    title: `Delete “${name}” forever?`,
+    body: `<p>This removes ${files.length === 1 ? 'one file' : plural(files.length, 'file', 'files')} from your folder:</p>`,
+    files,
+    after: `<p>Your sounds, your saved sounds and anything you have exported are not touched.${
+      shared.length ? ' The picture it shares with another composition is kept.' : ''}</p>`,
+    danger: 'This cannot be undone. A browser cannot send files to the recycle bin.',
+    actions
+  });
+  if (ans === 'archive') return setArchived(c, true);
+  if (ans !== 'delete') return;
+  try {
+    for (const p of files) { const [d, n] = split(p); try { await (await dirAt(d, false)).removeEntry(n); } catch (e) {} }
+    if (c.coverUrl) URL.revokeObjectURL(c.coverUrl);
+    comps = comps.filter(x => x !== c);
+    renderHome();
+    toast(`“${name}” was deleted.`);
+  } catch (e) { toast('Couldn\'t delete it. Check that the folder is still there.'); }
 }
 
 /* ---------- a composition ---------- */
 const blank = () => ({ file: null, name: '', cover: null, coverUrl: null, coverPending: null, volume: 0.8, tracks: [], dirty: false,
+  archived: false, savedAt: 0,
   effect: 'fireflies', background: null, bgUrl: null, bgPending: null, pixel: false, fill: false });
 const FILTER_KEYS = ['reverb', 'echo', 'muffled', 'thin', 'waves', 'movement', 'trajectory'];
 const MODES = { loop: 'Continuous', interval: 'At intervals', random: 'Random' };
@@ -347,19 +669,36 @@ const fromJson = j => Object.assign(defaults(String(j.file), typeof j.name === '
 const validTrack = j => !!j && typeof j === 'object' && typeof j.file === 'string' && !!j.file;
 
 function enterEditor() {
+  saveFail = null;
   $('title').value = cur.name;
   setMasterUI();
   master.gain.value = cur.volume;
   $('list').innerHTML = '';
   setCover(cur.coverUrl);
   $('search').value = '';
-  renderLibrary(); updateEmpty(); updateSaveUI(); setPlayUI();
+  $('findSound').value = '';
+  $('exStatus').textContent = '';   // a message about another composition must not follow you here
+  $('exBusy').hidden = true;
+  renderLibrary(); updateEmpty(); updateSaveUI(); setPlayUI(); updateSoloNote();
   show('vEditor');
+  clearInterval(agoT);
+  agoT = setInterval(() => { if (cur && !cur.dirty && !saveFail && cur.file) updateSaveUI(); }, 30000);
 }
-async function openComp(c) {
+/* Opening a composition is a step of its own in the browser's history, so the Back button
+   returns to the list instead of leaving αtmos, and a reload comes back to the same composition. */
+const compId = c => c.file.split('/').pop().replace(/\.json$/i, '');
+let navLock = false;
+function pushView(hash) {
+  navLock = true;
+  try { history.pushState({ atmos: hash }, '', hash ? '#' + encodeURIComponent(hash) : location.pathname + location.search); } catch (e) {}
+  navLock = false;
+}
+async function openComp(c, noPush) {
   const d = c.data;
   cur = Object.assign(blank(), { file: c.file, name: d.name, cover: d.cover, coverUrl: c.coverUrl, volume: d.masterVolume,
+    archived: !!d.archived, savedAt: c.mod,
     effect: d.immersion.effect, background: d.immersion.background, pixel: d.immersion.pixelArt, fill: d.immersion.fill });
+  if (!noPush) pushView(compId(c));
   enterEditor();
   const me = cur;
   if (cur.background) readFile(cur.background).then(f => { if (cur === me) cur.bgUrl = URL.createObjectURL(f); }).catch(() => {});
@@ -371,9 +710,35 @@ async function openComp(c) {
   const worker = async () => { while (i < tracks.length && cur === me) await loadTrack(tracks[i++]); };
   await Promise.all([worker(), worker(), worker()]);
 }
-function newComposition() { cur = blank(); enterEditor(); $('title').focus(); }
+function newComposition() { cur = blank(); pushView('new'); enterEditor(); $('title').focus(); }
+function goBack() { if ((location.hash || '').length > 1) history.back(); else leaveEditor(); }
+window.addEventListener('popstate', async () => {
+  if (navLock || !root) return;
+  const inEditor = !$('vEditor').hidden;
+  const want = decodeURIComponent((location.hash || '').replace(/^#/, ''));
+  if (inEditor && !want) {
+    await leaveEditor();
+    // the person chose to stay (unsaved work): put the step back so Back still works
+    if (!$('vEditor').hidden) pushView(cur && cur.file ? compId(cur) : 'new');
+  } else if (!inEditor && want) {
+    const c = comps.find(x => compId(x) === want);
+    if (c) openComp(c, true);
+  }
+});
 async function leaveEditor() {
   if (cur && (cur.dirty || saving)) await saveComp(false);
+  if (cur && saveFail) {
+    const go = await dialog({
+      title: 'Your latest changes could not be saved',
+      body: `<p>αtmos could not write to your folder, so the newest changes to “${esc(cur.name || 'this composition')}” are
+        only in this window. If you leave now, they are lost.</p>`,
+      actions: [{ label: 'Stay here', kind: 'ghost', value: false }, { label: 'Try again', kind: 'primary', value: 'retry' },
+        { spacer: true }, { label: 'Leave without saving', kind: 'danger', value: true }]
+    });
+    if (go === 'retry') { await saveComp(true); return leaveEditor(); }
+    if (!go) return;
+  }
+  saveFail = null;
   closeImmersion();
   unfocusTrack();
   if (cur) cur.tracks.forEach(stopTrackTest);
@@ -382,28 +747,63 @@ async function leaveEditor() {
   if (cur) cur.tracks.forEach(t => { stopSources(t); try { disposeChain(t.nodes); } catch (e) {} });
   if (cur && cur.bgUrl) URL.revokeObjectURL(cur.bgUrl);
   cur = null;
+  undoRemove = null;
+  clearInterval(agoT); agoT = null;
   buffers.clear();   // decoded audio takes a lot of memory: release it when the composition is closed
-  await loadComps(); renderHome(); show('vHome');
+  if ((location.hash || '').length > 1) { navLock = true; try { history.replaceState({}, '', location.pathname + location.search); } catch (e) {} navLock = false; }
+  await scanLibrary(); await loadComps(); renderHome(); show('vHome');
 }
-let autoT = null, changeN = 0, saving = null;
+let autoT = null, changeN = 0, saving = null, saveFail = null, agoT = null;
+let knowsAutoSave = (() => { try { return !!localStorage.getItem('atmos-autosave-told'); } catch (e) { return true; } })();
 function markDirty() {
   if (!cur) return;
   cur.dirty = true; changeN++; updateSaveUI();
   clearTimeout(autoT); autoT = setTimeout(() => saveComp(false), 900);
+  // said once, the first time someone changes a composition, and never again
+  if (!knowsAutoSave && cur.file) {
+    knowsAutoSave = true;
+    try { localStorage.setItem('atmos-autosave-told', '1'); } catch (e) {}
+    toast('No need to save — every change is kept in your folder automatically.', { ms: 6000 });
+  }
 }
+const agoText = t => {
+  if (!t) return '';
+  const s = (Date.now() - t) / 1000;
+  if (s < 50) return 'just now';
+  const m = Math.round(s / 60);
+  if (m < 60) return plural(m, 'min ago', 'min ago');
+  const h = Math.round(m / 60);
+  return plural(h, 'hour ago', 'hours ago');
+};
+/* The one place that answers "is my work safe?". It has a sign as well as words, so the state
+   never depends on reading alone, and it rides in the bar that stays pinned while you scroll. */
 function updateSaveUI() {
   if (!cur) return;
-  $('saveBtn').classList.toggle('dirty', cur.dirty);
-  $('saveStatus').textContent = cur.dirty ? 'Unsaved changes' : (cur.file ? 'All changes saved' : '');
+  const p = $('savePlate'), b = $('saveBtn');
+  p.classList.remove('saving', 'err');
+  let mark, words, when = '', btn = null;
+  if (saveFail) { p.classList.add('err'); mark = `<span class="alert">${ICO.alert}</span>`; words = 'Could not save'; when = saveFail; btn = 'Try again'; }
+  else if (saving && cur.dirty) { p.classList.add('saving'); mark = '<span class="dot"></span>'; words = 'Saving…'; }
+  else if (cur.dirty) { mark = '<span class="dot"></span>'; words = 'Unsaved changes'; btn = 'Save now'; }
+  else if (!cur.file) { mark = '<span class="dot"></span>'; words = 'Not saved yet'; btn = 'Save'; }
+  else { mark = `<span class="tick">${ICO.check}</span>`; words = 'Saved'; when = agoText(cur.savedAt); }
+  p.innerHTML = mark + `<span>${esc(words)}</span>` + (when ? `<span class="when">${esc(when)}</span>` : '');
+  b.textContent = btn || 'Save';
+  b.className = btn ? 'primary' : 'ghost';
+  b.title = btn === 'Try again' ? 'Try saving again'
+    : 'Save now (Ctrl+S). αtmos also saves by itself about a second after every change.';
 }
+// only a real picture may be used as a cover, a sound's image or an immersion backdrop
+const isImage = f => !!f && /^image\/(png|jpeg|webp|gif|avif|bmp)$/.test(f.type);
+const notAPicture = () => toast('That file is not a picture. Choose a JPG, PNG or WebP image.', { ms: 5000 });
 function setCover(url) {
   $('coverImg').hidden = !url; $('coverPh').hidden = !!url;
   if (url) $('coverImg').src = url;
   $('coverBtn').classList.toggle('has', !!url);
-  // the atmosphere at the top of the page takes its colours from the cover (or a tint drawn from the title)
+  $('coverActs').hidden = !url;
+  // the atmosphere at the top of the page is the cover, blurred, over the palette's own horizon
   $('atmoImg').hidden = !url;
   if (url) $('atmoImg').src = url;
-  $('atmo').style.setProperty('--h', hue((cur && cur.name) || 'atmosphere'));
 }
 function setMasterUI() {
   const v = Math.round(cur.volume * 100);
@@ -414,8 +814,8 @@ async function saveComp(manual = true) {
   if (!cur) return;
   clearTimeout(autoT);
   if (saving) { await saving; if (!cur || !cur.dirty) return; }
-  if (!cur.dirty && cur.file) { if (manual) toast('Everything is already saved'); return; }
-  saving = doSave(manual); await saving; saving = null;
+  if (!cur.dirty && cur.file && !saveFail) { if (manual) toast('Everything is already saved'); return; }
+  saving = doSave(manual); updateSaveUI(); await saving; saving = null;
 }
 async function doSave(manual) {
   const c = cur, startN = changeN;
@@ -452,16 +852,24 @@ async function doSave(manual) {
     }
     const data = { version: 2, name, cover: c.cover, masterVolume: r2(c.volume),
       immersion: { effect: c.effect, background: c.background, pixelArt: !!c.pixel, fill: !!c.fill }, tracks: c.tracks.map(toJson) };
+    if (c.archived) data.archived = true;
     await writeFile(c.file, JSON.stringify(data, null, 2));
     if (c.renamedFrom) {
       const [d, n] = split(c.renamedFrom); c.renamedFrom = null;
       try { await (await dirAt(d, false)).removeEntry(n); } catch (e) {}
     }
     if (changeN === startN) c.dirty = false;
+    c.savedAt = Date.now();
+    saveFail = null;
     updateSaveUI();
+    if (c === cur) { const p = $('savePlate'); p.classList.add('flash'); setTimeout(() => p.classList.remove('flash'), 600); }
     if (manual) toast('Saved');
     if (c.dirty && c === cur) markDirty();
-  } catch (e) { toast('Couldn\'t save. Check that the folder is still there.'); }
+  } catch (e) {
+    // A failed save must not fade away: it stays until it succeeds, and leaving asks first.
+    saveFail = 'the folder can\'t be reached';
+    updateSaveUI();
+  }
 }
 
 /* ---------- audio: chain and scheduling ---------- */
@@ -472,14 +880,36 @@ function effectiveGain(t) {
 }
 /* ---------- filters ---------- */
 const FILTERS = [
-  ['reverb', 'Reverb', 'Space and tail, like a cave or a hall'],
-  ['echo', 'Echo', 'Repeats that bounce between left and right and slowly fade away'],
-  ['muffled', 'Muffled', 'Takes away the highs: a distant sound, behind a window or under water'],
-  ['thin', 'Thin', 'Takes away the lows: a lighter, airier sound'],
-  ['waves', 'Waves', 'The volume slowly rises and falls, like breathing'],
-  ['movement', 'Movement', 'The sound drifts slowly between left and right'],
-  ['trajectory', 'Trajectory', 'On every repeat the sound travels across the space. The slider is the width: 100% = from far left to far right, 50% = halfway out on each side, low values = a slight movement around the centre. With “random” the direction changes by chance and the slider sets how far the sound can travel']
+  ['reverb', 'Reverb', 'Space around the sound, and a tail that fades — a hall, a cave'],
+  ['echo', 'Echo', 'Repeats that bounce left and right and slowly die away'],
+  ['muffled', 'Muffled', 'Takes the brightness away: far off, behind a window, under water'],
+  ['thin', 'Thin', 'Takes the depth away: lighter, airier, further from you'],
+  ['waves', 'Waves', 'The volume rises and falls on its own, like breathing'],
+  ['movement', 'Movement', 'The sound drifts slowly from one side to the other'],
+  ['trajectory', 'Trajectory', 'Each time it plays, the sound travels across: how far it goes is the setting']
 ];
+/* Words instead of percentages: you do not have to know what 42% of a reverb sounds like. */
+const fxWord = v => v === 0 ? 'Off' : v < 34 ? 'A little' : v < 67 ? 'Medium' : 'Strong';
+/* Ready-made places. Each one simply sets the sliders below, so nothing new happens to the sound —
+   it is the same seven effects, chosen for you. */
+const noFx = () => ({ reverb: 0, echo: 0, muffled: 0, thin: 0, waves: 0, movement: 0, trajectory: 0 });
+const place = (fx, revType, echoType) => ({ fx: Object.assign(noFx(), fx), revType: revType || 'cathedral', echoType: echoType || 'valley' });
+const PLACES = [
+  ['here', 'Right here', place({})],
+  ['near', 'A step away', place({ reverb: 22, muffled: 12 }, 'room')],
+  ['window', 'Behind a window', place({ muffled: 66, reverb: 20, thin: 12 }, 'room')],
+  ['hall', 'In a big room', place({ reverb: 48 }, 'hall')],
+  ['cathedral', 'In a cathedral', place({ reverb: 76 }, 'cathedral')],
+  ['cave', 'In a cave', place({ reverb: 60, muffled: 26, echo: 16 }, 'cave', 'near')],
+  ['valley', 'Across a valley', place({ echo: 46, reverb: 34, muffled: 38 }, 'hall', 'valley')],
+  ['water', 'Under water', place({ muffled: 86, waves: 28, reverb: 24 }, 'cave')],
+  ['around', 'Drifting around you', place({ movement: 56, waves: 24, reverb: 20 }, 'hall')]
+];
+const placeOf = t => {
+  const hit = PLACES.find(([, , p]) =>
+    FILTER_KEYS.every(k => (t.fx[k] || 0) === p.fx[k]) && (!p.fx.reverb || t.revType === p.revType) && (!p.fx.echo || t.echoType === p.echoType));
+  return hit ? hit[0] : null;
+};
 /* Reverb spaces. rt = seconds for the tail to die away completely,
    pre = delay before the tail, dark = how much sooner the highs die away (rock walls),
    er = close early reflections (nearby walls). */
@@ -578,23 +1008,29 @@ function disposeChain(n) {
 }
 function fxValueText(t, k) {
   const v = t.fx[k] || 0;
-  if (!v) return 'off';
-  if (k !== 'trajectory') return v + '%';
-  const how = v >= 100 ? 'side to side' : v >= 70 ? 'wide' : v >= 35 ? 'medium' : 'slight';
-  return how + (t.trajRand ? ', random' : '') + ' · ' + v + '%';
+  if (k !== 'trajectory') return fxWord(v);
+  if (!v) return 'Off';
+  const how = v >= 100 ? 'Side to side' : v >= 70 ? 'Wide' : v >= 35 ? 'Halfway' : 'Slight';
+  return how + (t.trajRand ? ', random' : '');
 }
-const fxActive = t => Object.values(t.fx).some(v => v > 0);
+const fxCount = t => Object.values(t.fx).filter(v => v > 0).length;
 function refreshGains() {
   if (!cur) return;
   cur.tracks.forEach(t => {
     t.nodes.gain.gain.setTargetAtTime(effectiveGain(t), ctx.currentTime, 0.05);
     if (t.el) t.el.classList.toggle('off', effectiveGain(t) === 0);
   });
-  updateLive();
+  updateWhyOff(); updateSoloNote(); updateLive();
 }
 function updateLive() {
   if (!cur) return;
-  cur.tracks.forEach(t => t.el && t.el.classList.toggle('live', playing && t.mode === 'loop' && !!t.buffer && effectiveGain(t) > 0));
+  cur.tracks.forEach(t => {
+    if (!t.el) return;
+    t.el.classList.toggle('live', playing && t.mode === 'loop' && !!t.buffer && effectiveGain(t) > 0);
+    // gold means "this is sounding now": solo only wears it while the mix is actually playing
+    const s = t.el.querySelector('.solo');
+    if (s) s.classList.toggle('sounding', t.solo && playing);
+  });
 }
 function fadeLen(t, d) {
   if (t.mode === 'loop') return t.crossfade ? Math.min(t.fade, d / 3) : 0;
@@ -872,12 +1308,15 @@ function trackTest(t) {
   ctx.resume();
   const g = ctx.createGain(); g.gain.value = t.volume;
   g.connect(t.nodes.fxIn);
-  const seam = isSeamless(t), src = ctx.createBufferSource(), when = ctx.currentTime + 0.02;
-  src.buffer = seam ? t.loopBuf : t.buffer;
-  src.loop = !!seam;                     // with ∞ on it keeps looping, so you can hear the join
-  const tp = trajConnect(t, ctx, src, g, when, t.buffer.duration, seam ? t.loopBuf.duration : 0);
+  const seam = isSeamless(t), buf = seam ? t.loopBuf : t.buffer;
+  const src = ctx.createBufferSource(), when = ctx.currentTime + 0.02;
+  src.buffer = buf;
+  // The preview repeats until you stop it. While you are adjusting volume, position or an effect,
+  // the sound has to still be there — otherwise every change means pressing play again.
+  src.loop = true;
+  const tp = trajConnect(t, ctx, src, g, when, buf.duration, buf.duration);
   src.start(when);
-  t.pv = { src, g, start: when, dur: seam ? Infinity : t.buffer.duration, loop: seam ? t.loopBuf.duration : 0 };
+  t.pv = { src, g, start: when, dur: Infinity, loop: buf.duration };
   src.onended = () => { if (tp && tp.osc) try { tp.osc.stop(); } catch (e) {} if (t.pv && t.pv.src === src) stopTrackTest(t); };
   setTestBtn(t);
   if (!progRAF) progRAF = requestAnimationFrame(progLoop);
@@ -888,7 +1327,7 @@ const panLabel = v => { const n = Math.round(Math.abs(v) * 100); return n < 5 ? 
 
 function renderTrack(t) {
   const el = document.createElement('div');
-  el.className = 'track';
+  el.className = 'track' + (t.missing ? ' missing' : '');
   const dur = baseDur(t);
   const loopOpts = t.seamless ? `
     <div class="opts">
@@ -929,28 +1368,34 @@ function renderTrack(t) {
     echo: `<select class="revtype echotype" title="How far the echo is" aria-label="How far the echo is">${options(ECHOES, t.echoType)}</select>`,
     trajectory: `<select class="revtype trajdir" title="Direction" aria-label="Direction">${options(TRAJ, t.trajDir, v => v)}</select><label class="fxcheck" title="Picks the direction by chance on every repeat"><input type="checkbox" class="trajrand" ${t.trajRand ? 'checked' : ''}> random</label>`
   };
+  const saved = isSavedSound(t.name);
   el.innerHTML = `
     <div class="tbg"></div>
     <div class="top">
-      <span class="grip" title="Drag to reorder">${ICO.grip}</span>
-      <span class="dot"></span>
+      <span class="grip" tabindex="0" role="button" title="Drag to reorder, or use the up and down arrows" aria-label="Move ${esc(t.name)}">${ICO.grip}</span>
+      ${t.missing ? `<span class="dot miss" title="The audio file is missing">${ICO.alert}</span>` : '<span class="dot"></span>'}
       <input class="name" value="${esc(t.name)}" title="Click to rename · file: ${esc(t.file)}" spellcheck="false" aria-label="Name of the sound">
+      <span class="tname">${esc(t.name)}</span>
       <div class="imgctl">
-        <button class="icon imgown" title="Use your own image (or drag one onto this sound, or paste it with Ctrl+V)" aria-label="Choose an image for this sound">${ICO.image}</button>
-        <button class="icon imgdel" title="Remove the image" aria-label="Remove the image" ${t.img ? '' : 'hidden'}>${ICO.x}</button>
+        <button class="icon imgown" title="${t.img ? 'Change the picture of this sound' : 'Add a picture to this sound (or drag one onto it, or paste it with Ctrl+V)'}" aria-label="Choose a picture for this sound">${ICO.image}</button>
+        <button class="icon imgdel" title="Remove the picture" aria-label="Remove the picture" ${t.img ? '' : 'hidden'}>${ICO.x}</button>
       </div>
-      <span class="dur">${dur}</span>
+      <span class="dur">${dur}</span><span class="tdur">${dur}</span>
+      ${t.muted ? '<span class="why-off">muted</span>' : ''}
       <div class="btns">
-        <button class="icon test ${t.pv ? 'on' : ''}" title="${t.pv ? 'Stop the preview' : 'Preview this sound'}" aria-label="Preview this sound" ${t.buffer ? '' : 'disabled'}>${t.pv ? ICO.stop : ICO.play}</button>
-        <button class="chip mute ${t.muted ? 'on' : ''}" title="Mute" aria-label="Mute" aria-pressed="${t.muted}">M</button>
-        <button class="chip solo ${t.solo ? 'on' : ''}" title="Solo: play only this sound" aria-label="Solo" aria-pressed="${t.solo}">S</button>
-        <button class="chip fxb ${fxActive(t) ? 'on' : ''} ${t.fxOpen ? 'open' : ''}" title="Filters: reverb, echo and more">Filters</button>
-        <button class="chip seam ${t.seamless && t.mode === 'loop' ? 'on' : ''}" aria-label="Seamless loop" title="${t.mode === 'loop' ? 'Seamless loop: joins the end to the start, with no gap' : 'Seamless loop: available in Continuous mode'}" ${t.mode === 'loop' && t.buffer ? '' : 'disabled'}>∞</button>
-        <button class="icon keep" title="Save this sound to your library, with its image, filters and settings" aria-label="Save to your library">${ICO.keep}</button>
-        <button class="icon del" title="Remove from the composition" aria-label="Remove from the composition">${ICO.x}</button>
+        <button class="icon test ${t.pv ? 'on' : ''}" title="${t.pv ? 'Stop' : 'Listen to this sound on its own, over and over, while you adjust it'}" aria-label="Listen to this sound on its own" ${t.buffer ? '' : 'disabled'}>${t.pv ? ICO.stop : ICO.play}</button>
+        <button class="chip mute ${t.muted ? 'on' : ''}" title="Silence this sound" aria-label="Mute" aria-pressed="${t.muted}"><span class="w">Mute</span></button>
+        <button class="chip solo ${t.solo ? 'on' : ''}" title="Play only this sound" aria-label="Solo" aria-pressed="${t.solo}"><span class="w">Solo</span></button>
+        <button class="chip fxb ${t.fxOpen ? 'open' : ''}" title="Reverb, echo and more" aria-expanded="${!!t.fxOpen}">Effects${fxCount(t) ? `<span class="n">${fxCount(t)}</span>` : ''}</button>
+        <button class="chip seam ${t.seamless && t.mode === 'loop' ? 'on' : ''}" aria-label="Seamless loop" aria-pressed="${!!(t.seamless && t.mode === 'loop')}" title="${t.mode === 'loop' ? 'Seamless loop: joins the end to the start, with no gap' : 'Seamless loop: available in Continuous mode'}" ${t.mode === 'loop' && t.buffer ? '' : 'disabled'}><span class="w">Seamless</span></button>
+        <button class="icon keep ${saved ? 'is-saved' : ''}" title="${saved ? 'Already saved in your sounds — save again to replace it' : 'Save this sound to your sounds, with its picture, effects and settings'}" aria-label="Save to your sounds">${saved ? ICO.keepOn : ICO.keep}</button>
+        <button class="tclose" title="Close (Esc)">Done</button>
+        <button class="icon del" title="Remove from this composition" aria-label="Remove ${esc(t.name)} from this composition">${ICO.x}</button>
       </div>
     </div>
-    ${t.missing ? `<p class="warn">File not found: ${esc(t.file)}. Put it back in that folder and reopen the composition.</p>` : ''}
+    ${t.missing ? `<p class="warn">${ICO.alert}<span>The audio file for this sound is missing (<b>${esc(t.file.split('/').pop())}</b>).</span>
+       <button class="ghost sm relink">Choose the file…</button>
+       <button class="quiet sm dropit">Remove this sound</button></p>` : ''}
     <div class="grid">
       <div class="field"><label>Volume <span class="val vv">${Math.round(t.volume * 100)}%</span></label>
         <input type="range" class="vol" min="0" max="100" value="${Math.round(t.volume * 100)}" aria-label="Volume"></div>
@@ -964,9 +1409,14 @@ function renderTrack(t) {
       ${{ loop: loopOpts, interval: intOpts, random: rndOpts }[t.mode]}
     </div>
     <div class="fxp" ${t.fxOpen ? '' : 'hidden'}>
+      <div class="fx-places">
+        <p>Put this sound…</p>
+        <div class="chips">${PLACES.map(([id, label]) => `<button class="chip place${placeOf(t) === id ? ' on' : ''}" data-p="${id}">${esc(label)}</button>`).join('')}</div>
+      </div>
       <div class="grid">
         ${FILTERS.map(([k, label, hint]) => `
-        <div class="field${k === 'trajectory' ? ' wide' : ''}"><div class="lab" title="${esc(hint)}"><span>${label}</span>${extra[k] || ''}<span class="val" data-v="${k}">${fxValueText(t, k)}</span></div>
+        <div class="field${k === 'trajectory' ? ' wide' : ''}"><div class="lab"><span>${label}</span>${extra[k] || ''}<span class="val" data-v="${k}">${fxValueText(t, k)}</span></div>
+          <p class="fx-hint">${esc(hint)}</p>
           <input type="range" min="0" max="100" step="1" value="${t.fx[k]}" data-k="${k}" aria-label="${label}"></div>`).join('')}
       </div>
     </div>
@@ -978,6 +1428,29 @@ function renderTrack(t) {
   q('.solo').onclick = e => { t.solo = !t.solo; e.currentTarget.classList.toggle('on', t.solo); e.currentTarget.setAttribute('aria-pressed', t.solo); refreshGains(); markDirty(); };
   q('.del').onclick = () => removeTrack(t);
   q('.keep').onclick = () => savePreset(t);
+  q('.tclose').onclick = () => unfocusTrack();
+  if (t.missing) {
+    q('.relink').onclick = () => { relinkTarget = t; $('relinkIn').click(); };
+    q('.dropit').onclick = () => removeTrack(t);
+  }
+  // the ready-made places simply move the sliders below
+  el.querySelectorAll('.place').forEach(b => b.onclick = () => {
+    const p = PLACES.find(x => x[0] === b.dataset.p)[2];
+    FILTER_KEYS.forEach(k => t.fx[k] = p.fx[k]);
+    t.revType = p.revType; t.echoType = p.echoType;
+    setReverbType(t); applyFx(t);
+    replaceEl(t); markDirty();
+  });
+  // reordering without a mouse: the handle takes the arrow keys
+  q('.grip').onkeydown = e => {
+    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+    e.preventDefault();
+    const a = cur.tracks, i = a.indexOf(t), j = i + (e.key === 'ArrowUp' ? -1 : 1);
+    if (j < 0 || j >= a.length) return;
+    moveTrack(t, a[j], e.key === 'ArrowDown');
+    t.el.querySelector('.grip').focus();
+    toast(`“${t.name}” moved to ${j + 1} of ${a.length}`, { ms: 1800 });
+  };
   q('.name').onkeydown = e => { if (e.key === 'Enter') e.target.blur(); if (e.key === 'Escape') { e.target.value = t.name; e.target.blur(); } };
   q('.name').onchange = e => {
     t.name = e.target.value.trim() || t.file.split('/').pop().replace(/\.[^.]+$/, '');
@@ -1007,11 +1480,15 @@ function renderTrack(t) {
     e.preventDefault();
     clearShift(); moveTrack(dragT, t, dropAfter(el, e)); clearDropMarks();
   });
-  // tiles view: a click opens the tile large
+  // tiles view: a click — or Enter on the tile itself — opens the tile large
   el.addEventListener('click', e => {
     if (!$('list').classList.contains('tiles') || el.classList.contains('focused')) return;
     if (e.target.closest('button, input, select, label, .grip')) return;
     focusTrack(t);
+  });
+  el.addEventListener('keydown', e => {
+    if (e.target !== el || !$('list').classList.contains('tiles') || el.classList.contains('focused')) return;
+    if (e.key === 'Enter' || e.code === 'Space') { e.preventDefault(); focusTrack(t); }
   });
   el.addEventListener('dragleave', e => { if (!el.contains(e.relatedTarget)) el.classList.remove('imgdrop'); });
   el.addEventListener('drop', e => {
@@ -1022,7 +1499,9 @@ function renderTrack(t) {
   paintTrackImage(t, el);
   q('.fxb').onclick = e => {
     t.fxOpen = !t.fxOpen;
-    q('.fxp').hidden = !t.fxOpen; e.currentTarget.classList.toggle('open', t.fxOpen);
+    q('.fxp').hidden = !t.fxOpen;
+    e.currentTarget.classList.toggle('open', t.fxOpen);
+    e.currentTarget.setAttribute('aria-expanded', t.fxOpen);
   };
   q('.revtype:not(.echotype):not(.trajdir)').onchange = e => { t.revType = e.target.value; setReverbType(t); markDirty(); };
   q('.echotype').onchange = e => { t.echoType = e.target.value; applyFx(t); markDirty(); };
@@ -1032,7 +1511,9 @@ function renderTrack(t) {
   el.querySelectorAll('.fxp input[data-k]').forEach(inp => inp.oninput = () => {
     const k = inp.dataset.k; t.fx[k] = +inp.value;
     el.querySelector(`[data-v="${k}"]`).textContent = fxValueText(t, k);
-    q('.fxb').classList.toggle('on', fxActive(t));
+    setFxCount(t);
+    const now = placeOf(t);
+    el.querySelectorAll('.place').forEach(b => b.classList.toggle('on', b.dataset.p === now));
     applyFx(t); markDirty();
   });
   q('.seam').onclick = e => {
@@ -1059,12 +1540,17 @@ function renderTrack(t) {
     q('.fade').onchange = () => { if (t.seamless) applySeamless(t); };
   } else if (t.mode === 'random') {
     const soon = () => { if (playing && t.st && t.buffer) t.st.next = Math.min(t.st.next, Math.max(ctx.currentTime, t.st.lastEnd || 0) + randomPause(t)); };
-    q('.count').onchange = e => { t.count = Math.round(num(+e.target.value || 3, 3, 1, 600)); e.target.value = t.count; soon(); markDirty(); };
-    const setPer = () => { const n = Math.round(num(+q('.perN').value || 1, 1, 1, 999)); q('.perN').value = n; t.per = n * +q('.perU').value; soon(); markDirty(); };
+    // an impossible entry goes back to what was there before, never to some default
+    q('.count').onchange = e => { t.count = Math.floor(num(parseFloat(e.target.value), t.count, 1, 600)); e.target.value = t.count; soon(); markDirty(); };
+    const setPer = () => {
+      const was = Math.max(1, Math.round(t.per / +q('.perU').value));
+      const n = Math.floor(num(parseFloat(q('.perN').value), was, 1, 999));
+      q('.perN').value = n; t.per = n * +q('.perU').value; soon(); markDirty();
+    };
     q('.perN').onchange = setPer; q('.perU').onchange = setPer;
   } else {
     const soon = () => { if (playing && t.st) t.st.next = Math.min(t.st.next, ctx.currentTime + t.every); };
-    q('.every').onchange = e => { t.every = num(+e.target.value || 10, 10, 0.5, 3600); e.target.value = t.every; soon(); markDirty(); };
+    q('.every').onchange = e => { t.every = num(parseFloat(e.target.value), t.every, 0.5, 3600); e.target.value = t.every; soon(); markDirty(); };
   }
   if (t.mode !== 'loop') {
     q('.vpitch').onchange = e => { t.varyPitch = e.target.checked; markDirty(); };
@@ -1075,7 +1561,13 @@ function renderTrack(t) {
   paintRanges(el);
   return el;
 }
-function replaceEl(t) { if (!t.el) return; const n = renderTrack(t); if (focusT === t) n.classList.add('focused'); t.el.replaceWith(n); t.el = n; updateLive(); }
+function replaceEl(t) {
+  if (!t.el) return;
+  const n = renderTrack(t);
+  if (focusT === t) { n.classList.add('focused'); t.el.removeEventListener('keydown', trapInTile); n.addEventListener('keydown', trapInTile); }
+  t.el.replaceWith(n); t.el = n;
+  setTileFocus(); updateLive(); updateWhyOff(); applyFind();
+}
 
 /* ---------- order of the sounds ---------- */
 let dragT = null;
@@ -1110,10 +1602,21 @@ function setView(v) {
   unfocusTrack();
   $('list').classList.toggle('tiles', v === 'tiles');
   $('viewSeg').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  setTileFocus();
   try { localStorage.setItem('atmos-view', v); } catch (e) {}
 }
+/* in tiles view a whole tile is one thing you can reach with Tab and open with Enter */
+function setTileFocus() {
+  const tiles = $('list').classList.contains('tiles');
+  document.querySelectorAll('#list .track').forEach(el => {
+    if (tiles && !el.classList.contains('focused')) { el.setAttribute('tabindex', '0'); el.setAttribute('role', 'button'); }
+    else { el.removeAttribute('tabindex'); el.removeAttribute('role'); }
+  });
+}
+let focusPrev = null;
 function focusTrack(t) {
   unfocusTrack();
+  focusPrev = document.activeElement;
   focusPh = document.createElement('div'); focusPh.className = 'track-ph';
   focusPh.style.minHeight = t.el.offsetHeight + 'px';
   t.el.before(focusPh);
@@ -1122,13 +1625,31 @@ function focusTrack(t) {
   document.body.appendChild(focusShade);
   t.el.classList.add('focused');
   focusT = t;
+  setTileFocus();
+  // an opened tile behaves like a panel: the keyboard stays inside it until it is closed
+  const first = t.el.querySelector('button:not([disabled]), input:not([disabled])');
+  if (first) first.focus();
+  t.el.addEventListener('keydown', trapInTile);
+}
+function trapInTile(e) {
+  if (e.key !== 'Tab' || !focusT || !focusT.el) return;
+  const f = [...focusT.el.querySelectorAll('button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex="0"]')]
+    .filter(x => x.offsetParent !== null);
+  if (!f.length) return;
+  const i = f.indexOf(document.activeElement);
+  e.preventDefault();
+  f[(i + (e.shiftKey ? -1 : 1) + f.length) % f.length].focus();
 }
 function unfocusTrack() {
   if (!focusT) return;
-  if (focusT.el) focusT.el.classList.remove('focused');
+  if (focusT.el) { focusT.el.classList.remove('focused'); focusT.el.removeEventListener('keydown', trapInTile); }
   if (focusPh) focusPh.remove();
   if (focusShade) focusShade.remove();
-  focusT = focusPh = focusShade = null;
+  const back = focusT.el, prev = focusPrev;
+  focusT = focusPh = focusShade = focusPrev = null;
+  setTileFocus();
+  if (back && back.isConnected && $('list').classList.contains('tiles')) back.focus();
+  else if (prev && prev.isConnected) try { prev.focus(); } catch (e) {}
 }
 $('viewSeg').querySelectorAll('button').forEach(b => b.onclick = () => setView(b.dataset.v));
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && focusT) unfocusTrack(); });
@@ -1136,7 +1657,71 @@ setView((() => { try { return localStorage.getItem('atmos-view') || localStorage
 function updateEmpty() {
   const n = cur ? cur.tracks.length : 0;
   $('empty').hidden = n > 0;
-  $('compMeta').textContent = n ? plural(n, 'sound', 'sounds') : '';
+  $('exPanel').hidden = n === 0;         // nothing to export yet: do not offer it
+  $('findSound').hidden = n <= 8;
+  if (n <= 8 && $('findSound').value) { $('findSound').value = ''; applyFind(); }
+  const miss = cur ? cur.tracks.filter(t => t.missing).length : 0;
+  $('compMeta').innerHTML = n
+    ? esc(plural(n, 'sound', 'sounds')) + (miss ? `<span class="sep">·</span><span class="warn-line">${esc(plural(miss, 'sound', 'sounds'))} missing</span>` : '')
+    : '';
+}
+/* with many sounds, a field to find one by name instead of scrolling */
+function applyFind() {
+  const q = $('findSound').value.trim().toLowerCase();
+  if (!cur) return;
+  cur.tracks.forEach(t => { if (t.el) t.el.hidden = !!q && !t.name.toLowerCase().includes(q); });
+}
+$('findSound').oninput = applyFind;
+
+const isSavedSound = name => library.some(i => i.preset && i.name === (String(name).trim() || 'Sound'));
+function setKeepBtn(t) {
+  const b = t.el && t.el.querySelector('.keep');
+  if (!b) return;
+  const on = isSavedSound(t.name);
+  b.classList.toggle('is-saved', on);
+  b.innerHTML = on ? ICO.keepOn : ICO.keep;
+  b.title = on ? 'Already saved in your sounds — save again to replace it'
+    : 'Save this sound to your sounds, with its picture, effects and settings';
+}
+function setFxCount(t) {
+  const b = t.el && t.el.querySelector('.fxb');
+  if (!b) return;
+  const n = fxCount(t);
+  b.innerHTML = 'Effects' + (n ? `<span class="n">${n}</span>` : '');
+}
+/* a silenced sound says why it is silent, instead of only looking faded */
+function updateWhyOff() {
+  if (!cur) return;
+  const anySolo = cur.tracks.some(x => x.solo);
+  cur.tracks.forEach(t => {
+    if (!t.el) return;
+    const txt = t.muted ? 'muted' : (anySolo && !t.solo) ? 'silenced by solo' : '';
+    let s = t.el.querySelector('.why-off');
+    if (!txt) { if (s) s.remove(); return; }
+    if (!s) { s = document.createElement('span'); s.className = 'why-off'; const d = t.el.querySelector('.tdur'); if (d) d.after(s); }
+    s.textContent = txt;
+  });
+}
+/* and the bar that is always on screen says which sound is holding the solo */
+function updateSoloNote() {
+  const n = $('soloNote');
+  if (!cur) { n.hidden = true; return; }
+  const solo = cur.tracks.filter(t => t.solo), muted = cur.tracks.filter(t => t.muted && !t.solo).length;
+  if (!solo.length && !muted) { n.hidden = true; return; }
+  n.hidden = false;
+  n.innerHTML = '';
+  if (solo.length) {
+    const names = solo.map(t => t.name).join(', ');
+    n.insertAdjacentHTML('beforeend', `<span>Playing only <b>${esc(names)}</b></span>`);
+    const go = document.createElement('button');
+    go.className = 'lnk'; go.textContent = 'Show';
+    go.onclick = () => { if (solo[0].el) solo[0].el.scrollIntoView({ behavior: 'smooth', block: 'center' }); };
+    const clr = document.createElement('button');
+    clr.className = 'lnk'; clr.textContent = 'Clear solo';
+    clr.onclick = () => { cur.tracks.forEach(t => { if (t.solo) { t.solo = false; if (t.el) { const b = t.el.querySelector('.solo'); b.classList.remove('on', 'sounding'); b.setAttribute('aria-pressed', 'false'); } } }); refreshGains(); markDirty(); };
+    n.append(go, clr);
+  }
+  if (muted) n.insertAdjacentHTML('beforeend', `<span style="margin-left:auto">${esc(plural(muted, 'sound', 'sounds'))} muted</span>`);
 }
 
 /* ---------- the image under each sound: you choose it (file, drag and drop, or Ctrl+V) ---------- */
@@ -1179,7 +1764,9 @@ function setImageUrl(t, url) {
 }
 $('trackImgIn').onchange = e => {
   const f = e.target.files[0]; e.target.value = '';
-  if (f && imgTarget) setOwnImage(imgTarget, f);
+  if (!f || !imgTarget) return;
+  if (!isImage(f)) return notAPicture();
+  setOwnImage(imgTarget, f);
 };
 // Ctrl+V with the mouse over a sound: pastes a copied image (or the address of an image)
 document.addEventListener('paste', e => {
@@ -1196,12 +1783,12 @@ document.addEventListener('paste', e => {
 });
 
 /* adding a sound: it goes into the list first, then its audio is loaded */
-function attachTrack(t) {
+function attachTrack(t, at) {
   t.nodes = buildChain(t, ctx, master);
-  cur.tracks.push(t);
   t.el = renderTrack(t);
-  $('list').appendChild(t.el);
-  updateEmpty();
+  if (at == null || at >= cur.tracks.length) { cur.tracks.push(t); $('list').appendChild(t.el); }
+  else { const ref = cur.tracks[at]; cur.tracks.splice(at, 0, t); if (ref.el) ref.el.before(t.el); else $('list').appendChild(t.el); }
+  setTileFocus(); updateEmpty(); applyFind();
 }
 async function loadTrack(t) {
   const me = cur;
@@ -1212,14 +1799,14 @@ async function loadTrack(t) {
   if (cur !== me || !cur.tracks.includes(t)) return false;
   replaceEl(t);
   if (playing && t.buffer) resetTrack(t, ctx.currentTime + 0.05);
-  refreshGains();
+  refreshGains(); updateEmpty();
   return true;
 }
 async function addTrack(t, mark = true) {
   attachTrack(t);
   if (await loadTrack(t) && mark) markDirty();
 }
-async function addFromLibrary(item) {
+async function addFromLibrary(item, quiet) {
   let buf;
   try { buf = await loadBuffer(item.path); } catch (e) { toast('Couldn\'t read this file'); return; }
   if (!cur) return;
@@ -1227,8 +1814,13 @@ async function addFromLibrary(item) {
   if (buf.duration < 8) t.mode = 'interval';   // short sounds start out "at intervals"
   await addTrack(t);
   if (t.el) t.el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  if (!quiet) toast(`“${t.name}” added to this composition`);
 }
+/* Removing a sound is instant, as it should be — but never final: the message offers it back,
+   with every setting, for as long as it is on screen (or Ctrl+Z). */
+let undoRemove = null;
 function removeTrack(t) {
+  const at = cur.tracks.indexOf(t), snap = toJson(t), name = t.name;
   stopTrackTest(t);
   if (focusT === t) unfocusTrack();
   stopSources(t);
@@ -1236,52 +1828,87 @@ function removeTrack(t) {
   cur.tracks = cur.tracks.filter(x => x !== t);
   t.el.remove(); t.el = null;
   refreshGains(); updateEmpty(); markDirty();
+  undoRemove = { snap, at, comp: cur };
+  toast(`“${name}” removed`, { action: 'Undo', onAction: putBackTrack });
+}
+async function putBackTrack() {
+  const u = undoRemove;
+  if (!u || u.comp !== cur) return;
+  undoRemove = null;
+  const t = fromJson(u.snap);
+  attachTrack(t, u.at);
+  await loadTrack(t);
+  markDirty();
+  toast(`“${t.name}” is back`);
 }
 
 /* ---------- library ---------- */
+const GROUPS = {
+  preset: ['With your settings', 'sounds you saved with the bookmark button, with their volume, filters and picture'],
+  own: ['Recordings', 'the audio files in your sounds folder'],
+  fs: ['From Freesound', 'sounds you fetched while making a composition']
+};
+const groupOf = i => i.preset ? 'preset' : i.fs ? 'fs' : 'own';
 function renderLibrary() {
   const q = $('search').value.trim().toLowerCase(), el = $('libList');
   el.innerHTML = '';
-  if (!library.length) { el.innerHTML = '<p class="hint">Files you add and sounds you save with the bookmark button appear here. Drop your audio files below to begin.</p>'; return; }
+  if (!library.length) {
+    el.innerHTML = `<p class="hint">You have no sounds yet.<br><br>Drop audio files into the box below, or look for some
+      under <b>Freesound</b> above.</p>`;
+    return;
+  }
   const items = library.filter(i => !q || (i.name + ' ' + i.path).toLowerCase().includes(q));
-  if (!items.length) { el.innerHTML = '<p class="hint">Nothing in your library matches that search.</p>'; return; }
+  if (!items.length) { el.innerHTML = '<p class="hint">None of your sounds match that search.</p>'; return; }
+  const many = new Set(items.map(groupOf)).size > 1;
   let group = null;
   items.forEach(i => {
-    const g = i.preset ? 'Saved sounds' : 'Audio files';
-    if (g !== group && library.some(x => x.preset)) { group = g; const h = document.createElement('div'); h.className = 'lib-group'; h.textContent = g; el.appendChild(h); }
+    const g = groupOf(i);
+    if (g !== group && many) {
+      group = g;
+      const h = document.createElement('div'); h.className = 'lib-group';
+      h.innerHTML = `${esc(GROUPS[g][0])}<small>${esc(GROUPS[g][1])}</small>`;
+      el.appendChild(h);
+    }
     const audio = i.preset ? i.data.file : i.path;
     const sub = i.preset ? describePreset(i.data) : i.path.slice(DIR.sounds.length + 1, i.path.lastIndexOf('/') + 1);
     const row = document.createElement('div'); row.className = 'lib-item';
     const playingThis = pv && pv.key === 'lib:' + audio;
-    row.innerHTML = `<button class="icon pv" title="Listen" aria-label="Listen">${ICO.play}</button>
+    row.innerHTML = `<button class="icon pv" title="Listen" aria-label="Listen to ${esc(i.name)}">${ICO.play}</button>
       <div class="li-name"><span title="${esc(audio)}">${esc(i.name)}</span>${sub ? `<small>${esc(sub)}</small>` : ''}</div>
-      <button class="icon add" title="${i.preset ? 'Add with all its settings' : 'Add to the composition'}" aria-label="Add to the composition">+</button>
-      <button class="icon rm" title="Delete from the library" aria-label="Delete from the library">${ICO.trash}</button>`;
+      <button class="icon add" title="${i.preset ? 'Add with all its settings' : 'Add to this composition'}" aria-label="Add ${esc(i.name)} to this composition">${ICO.plus}</button>
+      <button class="icon rm" title="Delete the file for good" aria-label="Delete ${esc(i.name)}">${ICO.trash}</button>`;
     const pb = row.querySelector('.pv');
     if (playingThis) { setPvBtn(pb, true); pv.btn = pb; }
     pb.onclick = () => togglePreview(audio, pb);
     row.querySelector('.add').onclick = () => i.preset ? addPreset(i) : addFromLibrary(i);
     row.querySelector('.rm').onclick = () => i.preset ? deletePreset(i) : deleteSound(i);
-    if (i.preset) { row.querySelector('.rm').title = 'Delete this saved sound (the audio file stays)'; presetImage(i, row); }
+    if (i.preset) { row.querySelector('.rm').title = 'Forget these settings (the audio file stays)'; presetImage(i, row); }
     el.appendChild(row);
   });
 }
 /* ---------- saved sounds (presets) ---------- */
 function describePreset(d) {
   const fx = Object.values(d.filters && typeof d.filters === 'object' ? d.filters : {}).filter(v => v > 0).length;
-  return MODES[pick(d.mode, MODES, 'loop')] + (d.seamlessLoop ? ' · ∞' : '') + (fx ? ` · ${plural(fx, 'filter', 'filters')}` : '');
+  return MODES[pick(d.mode, MODES, 'loop')] + (d.seamlessLoop ? ' · seamless' : '') + (fx ? ` · ${plural(fx, 'effect', 'effects')}` : '');
 }
 async function savePreset(t) {
   const name = t.name.trim() || 'Sound';
   const path = `${DIR.presets}/${slug(name)}.json`;
   if (await exists(path)) {
-    if (!confirm(`Your library already has a saved sound called “${name}”. Replace it with these settings?`)) return;
+    const ok = await dialog({
+      title: `Replace the saved sound “${name}”?`,
+      body: `<p>You already have a saved sound with this name. Its volume, position, filters and picture will be
+        replaced by the ones this sound has now.</p>`,
+      actions: [{ label: 'Cancel', kind: 'quiet', value: false }, { label: 'Replace it', kind: 'primary', value: true }]
+    });
+    if (!ok) return;
   }
   try {
     const data = toJson(t); data.name = name; data.version = 2;
     await writeFile(path, JSON.stringify(data, null, 2));
     await scanLibrary(); renderLibrary();
-    toast(`“${name}” saved to your library`);
+    if (t.el) setKeepBtn(t);
+    toast(`“${name}” saved to your sounds`);
   } catch (e) { toast('Couldn\'t save the sound'); }
 }
 async function addPreset(item) {
@@ -1289,9 +1916,16 @@ async function addPreset(item) {
   const t = fromJson(item.data);
   await addTrack(t);
   if (t.el) t.el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  toast(`“${item.name}” added to this composition`);
 }
 async function deletePreset(item) {
-  if (!confirm(`Delete the saved sound “${item.name}”?\nOnly its settings are removed: the audio file stays in your library and your compositions don't change.`)) return;
+  const ok = await dialog({
+    title: `Forget the settings saved as “${item.name}”?`,
+    body: `<p>Only the saved settings are removed. The audio file stays in your sounds, and the compositions
+      that already use it do not change.</p>`,
+    actions: [{ label: 'Cancel', kind: 'quiet', value: false }, { label: 'Forget them', kind: 'danger fill', value: true }]
+  });
+  if (!ok) return;
   try {
     const [d, n] = split(item.path);
     await (await dirAt(d, false)).removeEntry(n);
@@ -1303,9 +1937,15 @@ async function deleteSound(item) {
   const used = comps.filter(c => c.file !== (cur && cur.file) && c.data.tracks.some(t => t.file === item.path)).map(c => c.data.name || 'Untitled');
   const inCur = cur && cur.tracks.some(t => t.file === item.path);
   if (inCur) used.unshift((cur.name || $('title').value.trim() || 'this composition') + ' (open now)');
-  let msg = `Delete “${item.name}” from your library?\nThe file will be removed from the folder and can't be recovered.`;
-  if (used.length) msg += `\n\nIt is used in: ${used.join(', ')}.\nThere it will show as “file missing”.`;
-  if (!confirm(msg)) return;
+  const ok = await dialog({
+    title: `Delete “${item.name}” for good?`,
+    body: `<p>This removes the audio file from your folder.</p>`,
+    files: [item.path],
+    after: used.length ? `<p>It is used in: <b>${esc(used.join(', '))}</b>. There it will show as a missing file.</p>` : '',
+    danger: 'This cannot be undone. A browser cannot send files to the recycle bin.',
+    actions: [{ label: 'Cancel', kind: 'quiet', value: false }, { spacer: true }, { label: 'Delete forever', kind: 'danger fill', value: true }]
+  });
+  if (!ok) return;
   try {
     if (pv && pv.key === 'lib:' + item.path) stopPreview();
     const [d, n] = split(item.path);
@@ -1331,9 +1971,9 @@ async function importFiles(files) {
 
 /* ---------- Freesound ---------- */
 const FS_API = 'https://freesound.org/apiv2/search/';
-let fsKey = null, fsNext = null, fsResults = [], fsReq = 0;
+let fsKey = null, fsNext = null, fsResults = [], fsReq = 0, keyEditing = false;
 
-function updateFsUI() { $('fsKeyBox').hidden = !!fsKey; $('fsMain').hidden = !fsKey; }
+function updateFsUI() { $('fsKeyBox').hidden = !!fsKey && !keyEditing; $('fsMain').hidden = !fsKey || keyEditing; }
 function licLabel(u = '') {
   u = String(u).toLowerCase();
   if (u.includes('zero') || u.includes('creative commons 0')) return 'CC0';
@@ -1342,6 +1982,9 @@ function licLabel(u = '') {
   if (u.includes('/by') || u.includes('attribution')) return 'BY';
   return 'Licence';
 }
+/* the licence in words, since "BY-NC" means nothing to most people */
+const LIC_TEXT = { CC0: 'Free to use', BY: 'Credit the author', 'BY-NC': 'Credit, not for commercial use', 'Sampling+': 'Credit, some limits', Licence: 'See its licence' };
+const licText = u => LIC_TEXT[licLabel(u)] || 'See its licence';
 function withToken(u) { const x = new URL(u); x.protocol = 'https:'; x.searchParams.set('token', fsKey); return x.toString(); }
 const nk = n => { n = n || 0; return n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace('.0', '') + 'k' : String(n); };
 const fsFile = s => `${DIR.freesound}/${slug(s.name).slice(0, 60)}-${s.id}.mp3`;
@@ -1385,11 +2028,12 @@ function renderFs() {
   if (!fsResults.length) { el.innerHTML = '<p class="hint">No sounds found. Try different words.</p>'; return; }
   fsResults.forEach(s => {
     const row = document.createElement('div'); row.className = 'lib-item';
+    const have = audioPaths.has(fsFile(s));
     row.innerHTML = `<button class="icon pv" title="Listen" aria-label="Listen">${ICO.play}</button>
-      <div class="li-name"><span title="${esc(s.name)}">${esc(s.name)}</span>
-        <small>${fmt(s.duration)} · <span class="lic">${licLabel(s.license)}</span> · ↓ ${nk(s.num_downloads)} · ${esc(s.username)}${s.n_from_same_pack ? ` · +${esc(s.n_from_same_pack)} similar in the pack` : ''}</small></div>
+      <div class="li-name"><span title="${esc(s.name)}">${esc(stripExt(s.name))}</span>
+        <small>${fmt(s.duration)} · <span class="lic">${esc(licText(s.license))}</span> · ${esc(s.username)}${s.n_from_same_pack ? ` · +${esc(s.n_from_same_pack)} similar in the pack` : ''}</small></div>
       <a class="icon" href="${esc(s.url)}" target="_blank" rel="noopener" title="Open on Freesound" aria-label="Open on Freesound">${ICO.link}</a>
-      <button class="icon add" title="Save to your folder and add" aria-label="Save to your folder and add">+</button>`;
+      <button class="icon add" title="${have ? 'Already in your sounds — add it to this composition' : 'Save to your folder and add to this composition'}" aria-label="Add to this composition">${have ? ICO.check : ICO.plus}</button>`;
     const pb = row.querySelector('.pv');
     if (pv && pv.key === 'fs:' + s.id) { setPvBtn(pb, true); pv.btn = pb; }
     pb.onclick = () => toggleFsPreview(s, pb);
@@ -1431,8 +2075,15 @@ async function fsAdd(s, btn) {
   if (!cur || btn.disabled) return;
   const p = fsFile(s);
   const already = await exists(p);
-  if (!already && s.duration > 600 &&
-      !confirm(`“${s.name}” is ${fmt(s.duration)} long: the download will be large (about ${Math.round(s.duration * 128 / 8 / 1024)} MB) and may take a while. Continue?`)) return;
+  if (!already && s.duration > 600) {
+    const ok = await dialog({
+      title: 'This is a long sound',
+      body: `<p>“${esc(s.name)}” lasts ${fmt(s.duration)}. Fetching it will download about
+        ${Math.round(s.duration * 128 / 8 / 1024)} MB and may take a while.</p>`,
+      actions: [{ label: 'Cancel', kind: 'quiet', value: false }, { label: 'Fetch it anyway', kind: 'primary', value: true }]
+    });
+    if (!ok) return;
+  }
   btn.disabled = true; btn.textContent = '…';
   try {
     if (!already) {
@@ -1441,12 +2092,13 @@ async function fsAdd(s, btn) {
       await writeFile(p, blob);
       await addCredit(s, p);
     }
-    if (!cur) { btn.disabled = false; btn.textContent = '+'; return; }   // the composition was closed meanwhile: the file stays saved
-    await addFromLibrary({ path: p, name: s.name });
-    btn.textContent = '✓';
-    toast('Added to the composition');
+    if (!cur) { btn.disabled = false; btn.innerHTML = ICO.plus; return; }   // the composition was closed meanwhile: the file stays saved
+    await addFromLibrary({ path: p, name: stripExt(s.name) }, true);
+    btn.innerHTML = ICO.check;
+    await scanLibrary(); renderLibrary();   // it now has a home in "From Freesound"
+    toast(`“${stripExt(s.name)}” added to this composition`);
   } catch (e) {
-    btn.disabled = false; btn.textContent = '+';
+    btn.disabled = false; btn.innerHTML = ICO.plus;
     toast(e.name === 'AbortError' ? 'The download stalled for 20 seconds and was stopped. Try again in a moment.' : 'The download failed. You can get the file from its Freesound page.');
   }
 }
@@ -1470,11 +2122,12 @@ function encodeWav(ab) {
 }
 async function exportMix() {
   if (!cur || !cur.tracks.some(t => t.buffer)) { toast('Add a sound first'); return; }
-  const btn = $('exBtn'), st = $('exStatus');
-  btn.disabled = true; st.textContent = 'Creating the file…';
+  const c = cur, title = $('title').value.trim() || 'new mix';
+  const btn = $('exBtn'), st = $('exStatus'), busy = $('exBusy');
+  btn.disabled = true; st.textContent = ''; busy.hidden = false;
   await new Promise(r => setTimeout(r, 30));
   try {
-    const secs = +$('exDur').value * 60, sr = ctx.sampleRate, vol = cur.volume;
+    const secs = +$('exDur').value * 60, sr = ctx.sampleRate, vol = c.volume;
     const off = new OfflineAudioContext(2, Math.ceil(secs * sr), sr);
     const m = off.createGain(); m.connect(off.destination);
     if ($('exFade').checked) {
@@ -1482,18 +2135,22 @@ async function exportMix() {
       m.gain.setValueAtTime(0, 0); m.gain.linearRampToValueAtTime(vol, f);
       m.gain.setValueAtTime(vol, secs - f); m.gain.linearRampToValueAtTime(0, secs);
     } else m.gain.value = vol;
-    cur.tracks.forEach(t => {
+    c.tracks.forEach(t => {
       if (!t.buffer) return;
       const ch = buildChain(t, off, m);
       pump(t, { next: firstTime(t, 0), sources: null }, off, ch.gain, secs, false);
     });
     const rendered = await off.startRendering();
-    const p = await freeName(DIR.exports, slug($('title').value.trim() || 'new-mix'), '.wav');
+    const p = await freeName(DIR.exports, slug(title), '.wav');
     await writeFile(p, encodeWav(rendered));
-    st.textContent = 'Saved as ' + p;
+    const where = `Saved in your folder: exports › ${p.split('/').pop()}`;
+    // it may have finished after you left the composition: say so wherever you are now
+    if (cur === c) st.textContent = where; else toast(`“${title}” was exported.`);
   } catch (e) {
-    st.textContent = 'The file couldn\'t be created. Try a shorter length.';
+    if (cur === c) st.textContent = 'The file couldn\'t be created. Try a shorter length.';
+    else toast('The export of “' + title + '” failed.');
   }
+  busy.hidden = true;
   btn.disabled = false;
 }
 
@@ -1501,17 +2158,43 @@ async function exportMix() {
 $('pickBtn').onclick = pickFolder;
 $('changeFolder').onclick = pickFolder;
 $('newComp').onclick = newComposition;
-$('backBtn').onclick = leaveEditor;
+$('backBtn').onclick = goBack;
 $('saveBtn').onclick = () => saveComp(true);
 $('playBtn').onclick = () => playing ? stop() : start();
 $('master').oninput = e => { cur.volume = e.target.value / 100; master.gain.setTargetAtTime(cur.volume, ctx.currentTime, 0.05); setMasterUI(); markDirty(); };
 $('title').oninput = markDirty;
 $('coverBtn').onclick = () => $('coverIn').click();
+$('coverChange').onclick = () => $('coverIn').click();
+$('coverRemove').onclick = () => {
+  if (!cur) return;
+  cur.cover = null; cur.coverPending = null; cur.coverUrl = null;
+  setCover(null); markDirty();
+  toast('Cover removed. The picture file stays in your folder.');
+};
 $('coverIn').onchange = e => {
   const f = e.target.files[0]; e.target.value = '';
   if (!f || !cur) return;
+  if (!isImage(f)) return notAPicture();
   cur.coverPending = f; cur.coverUrl = URL.createObjectURL(f);
   setCover(cur.coverUrl); markDirty();
+};
+/* a sound whose file has gone can be pointed at the file again, keeping all its settings */
+let relinkTarget = null;
+$('relinkIn').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  const t = relinkTarget; relinkTarget = null;
+  if (!f || !t || !cur || !cur.tracks.includes(t)) return;
+  if (!AUDIO_RE.test(f.name)) { toast('That is not an audio file.'); return; }
+  try {
+    const ext = f.name.match(/\.[^.]+$/)[0].toLowerCase();
+    const path = await freeName(DIR.sounds, f.name.slice(0, -ext.length), ext);
+    await writeFile(path, f);
+    t.file = path; t.missing = false; t.buffer = null;
+    await loadTrack(t);
+    await scanLibrary(); renderLibrary();
+    updateEmpty(); markDirty();
+    toast('Found it. The sound keeps all its settings.');
+  } catch (e2) { toast('Couldn\'t copy that file into your folder.'); }
 };
 $('search').oninput = renderLibrary;
 $('rescan').onclick = async () => { await scanLibrary(); renderLibrary(); toast('Library refreshed'); };
@@ -1522,13 +2205,35 @@ document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
   $('paneFs').hidden = b.dataset.tab !== 'fs';
   if (b.dataset.tab === 'fs' && fsKey) $('fsQ').focus();
 });
+/* The key is checked straight away, so nobody is left wondering whether the hardest step worked.
+   "Change key" keeps the old one until a new one is accepted. */
 $('fsKeySave').onclick = async () => {
-  const k = $('fsKeyIn').value.trim();
-  if (!k) return;
-  fsKey = k; await kv.put('fsKey', k); updateFsUI(); $('fsQ').focus();
+  const k = $('fsKeyIn').value.trim(), msg = $('fsKeyMsg'), btn = $('fsKeySave');
+  msg.hidden = false;
+  if (!k) { msg.textContent = 'Paste your key first.'; return; }
+  msg.textContent = 'Checking…'; btn.disabled = true;
+  let ok = false;
+  try {
+    const r = await fetch(FS_API + '?' + new URLSearchParams({ query: 'rain', page_size: '1', fields: 'id', token: k }));
+    ok = r.ok;
+    if (r.status === 401) msg.textContent = 'Freesound didn\'t accept that key. Copy the code shown under “Client secret/Api key” and try again.';
+    else if (!r.ok) msg.textContent = 'Couldn\'t reach Freesound. Check your internet connection and try again.';
+  } catch (e) { msg.textContent = 'Couldn\'t reach Freesound. Check your internet connection and try again.'; }
+  btn.disabled = false;
+  if (!ok) return;
+  fsKey = k; await kv.put('fsKey', k);
+  keyEditing = false; msg.hidden = true; $('fsKeyCancel').hidden = true;
+  updateFsUI(); $('fsQ').focus();
+  toast('Key accepted — you can search Freesound now');
 };
-$('fsKeyReset').onclick = async () => { fsKey = null; await kv.put('fsKey', null); $('fsKeyIn').value = ''; updateFsUI(); };
-$('fsForm').onsubmit = e => { e.preventDefault(); fsSearch(false); };
+$('fsKeyReset').onclick = () => {
+  keyEditing = true; $('fsKeyIn').value = ''; $('fsKeyCancel').hidden = false; $('fsKeyMsg').hidden = true;
+  updateFsUI(); $('fsKeyIn').focus();
+};
+$('fsKeyCancel').onclick = () => { keyEditing = false; $('fsKeyCancel').hidden = true; $('fsKeyMsg').hidden = true; updateFsUI(); };
+$('fsForm').onsubmit = e => { e.preventDefault(); clearTimeout(fsTypeT); fsSearch(false); };
+let fsTypeT = null;
+$('fsQ').oninput = () => { clearTimeout(fsTypeT); fsTypeT = setTimeout(() => { if ($('fsQ').value.trim()) fsSearch(false); }, 600); };
 $('fsSort').onchange = $('fsDur').onchange = $('fsLic').onchange = () => { if ($('fsQ').value.trim()) fsSearch(false); };
 $('fsMore').onclick = () => fsSearch(true);
 $('fileIn').onchange = e => { importFiles([...e.target.files]); e.target.value = ''; };
@@ -1541,6 +2246,10 @@ window.addEventListener('drop', e => e.preventDefault());
 document.addEventListener('keydown', e => {
   if ($('vEditor').hidden) return;
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); saveComp(true); return; }
+  // undo the last removal, for as long as its message is on screen
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && undoRemove && $('toast').classList.contains('show')) {
+    e.preventDefault(); hideToast(); putBackTrack(); return;
+  }
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   const tag = document.activeElement ? document.activeElement.tagName : '';
   // in immersion the space bar always starts and stops; F switches to full screen
@@ -1625,10 +2334,28 @@ function renderFxChips() {
     el.appendChild(b);
   });
 }
+/* A pale picture would swallow the title and the play button: the scrim deepens for one. */
+function immPale(img) {
+  try {
+    const c = document.createElement('canvas'); c.width = c.height = 24;
+    const g = c.getContext('2d');
+    const w = img.naturalWidth, h = img.naturalHeight;
+    if (!w || !h) return false;
+    g.drawImage(img, w * 0.25, h * 0.25, w * 0.5, h * 0.5, 0, 0, 24, 24);
+    const d = g.getImageData(0, 0, 24, 24).data;
+    let s = 0;
+    for (let i = 0; i < d.length; i += 4) s += d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
+    return s / (d.length / 4) > 140;
+  } catch (e) { return false; }
+}
 function setImmBg() {
   const url = cur.bgUrl || cur.coverUrl, bg = $('immBg'), blur = $('immBlur');
   bg.hidden = !url;
-  if (url && bg.getAttribute('src') !== url) { bg.src = url; blur.src = url; }
+  if (url && bg.getAttribute('src') !== url) {
+    bg.src = url; blur.src = url;
+    bg.onload = () => $('imm').classList.toggle('pale', immPale(bg));
+  }
+  if (!url) $('imm').classList.remove('pale');
   bg.classList.toggle('fill', !!cur.fill);
   blur.hidden = !url || !!cur.fill;
   $('immFillBtn').classList.toggle('on', !!cur.fill);
@@ -1652,7 +2379,15 @@ async function openImmersion() {
   requestAnimationFrame(() => el.classList.add('show'));
   startFx(cur.effect);
   wake();
+  // the keyboard comes with you: focus lands on play and stays inside until you leave
+  immReturn = document.activeElement;
+  setTimeout(() => { try { $('immPlay').focus(); } catch (e) {} }, 60);
   if (!playing) start();
+}
+let immReturn = null;
+function immFocusables() {
+  return [...$('imm').querySelectorAll('button:not([hidden]):not([disabled]), input:not([disabled])')]
+    .filter(x => x.offsetParent !== null || x === document.activeElement);
 }
 function closeImmersion() {
   if (!immOpen) return;
@@ -1661,6 +2396,8 @@ function closeImmersion() {
   el.classList.remove('show', 'idle');
   clearTimeout(idleT);
   if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  if (immReturn && immReturn.isConnected) try { immReturn.focus(); } catch (e) {}
+  immReturn = null;
   setTimeout(() => { if (!immOpen) { el.hidden = true; stopFx(); } }, 700);
 }
 function toggleFullscreen() {
@@ -1684,16 +2421,42 @@ $('immPixelBtn').onclick = () => { cur.pixel = !cur.pixel; setImmBg(); markDirty
 $('immBgIn').onchange = e => {
   const f = e.target.files[0]; e.target.value = '';
   if (!f || !cur) return;
+  if (!isImage(f)) return notAPicture();
   if (cur.bgUrl) URL.revokeObjectURL(cur.bgUrl);
   cur.bgPending = f; cur.bgUrl = URL.createObjectURL(f);
   setImmBg(); markDirty();
 };
 $('immCoverBtn').onclick = () => { cur.bgUrl = null; cur.bgPending = null; cur.background = null; setImmBg(); markDirty(); };
 ['mousemove', 'mousedown', 'touchstart', 'keydown'].forEach(ev => $('imm').addEventListener(ev, wake, { passive: true }));
-document.addEventListener('keydown', e => { if (immOpen && e.key === 'Escape') closeImmersion(); });
+document.addEventListener('keydown', e => {
+  if (!immOpen) return;
+  wake();                                   // any key brings the controls back, as moving the mouse does
+  if (e.key === 'Escape') { closeImmersion(); return; }
+  if (e.key !== 'Tab') return;
+  const f = immFocusables();
+  if (!f.length) return;
+  const i = f.indexOf(document.activeElement);
+  e.preventDefault();
+  f[(i + (e.shiftKey ? -1 : 1) + f.length) % f.length].focus();
+}, true);
 window.addEventListener('resize', () => { if (immOpen && fxDef) startFx(cur.effect); });
 
-window.addEventListener('beforeunload', e => { if (cur && cur.dirty) { e.preventDefault(); e.returnValue = ''; } });
+window.addEventListener('beforeunload', e => { if (cur && (cur.dirty || saveFail)) { e.preventDefault(); e.returnValue = ''; } });
+
+/* The play bar is pinned while you scroll. When it is, it gets a solid strip behind it so the
+   page does not show through the one control you use most. */
+if ('IntersectionObserver' in window) {
+  new IntersectionObserver(
+    ([e]) => $('transport').classList.toggle('stuck', !e.isIntersecting),
+    { rootMargin: '-13px 0px 0px 0px', threshold: 0 }
+  ).observe($('tSentinel'));
+}
+/* Double-clicking the position slider puts the sound back in the centre. */
+document.addEventListener('dblclick', e => {
+  const r = e.target.closest('input[type=range].pan');
+  if (!r) return;
+  r.value = 0; paintRange(r); r.dispatchEvent(new Event('input', { bubbles: true }));
+});
 
 boot();
 })();
