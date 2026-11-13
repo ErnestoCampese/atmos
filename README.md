@@ -34,16 +34,19 @@ it will say so rather than half-work.
 3. Click **Choose a folder** and pick the folder you just made.
 4. Your browser will ask whether αtmos may **see and change** files in that folder. Say yes.
    This is the browser protecting you: αtmos can only ever touch the one folder you pointed it at.
-5. Click **New composition**, give it a name, and add your first sound from the panel on the right.
+5. Click **New composition** and give it a name.
+6. Add sounds from **Your sounds**, the panel on the right. A new folder starts empty: drop your
+   own audio files into the box at the bottom of that panel, or search for sounds on
+   [Freesound](#freesound).
 
-That is all. From then on, every change you make is saved by itself about a second later.
+From then on, every change you make is saved by itself about a second later.
 
 You can also **install** αtmos like an ordinary program: in Chrome or Edge, look for the install
 icon at the right of the address bar. It then opens in its own window, and works without an
 internet connection.
 
-> Coming back the next day, your browser asks you to open the folder again. That is normal and
-> deliberate — a web page is never allowed to keep hold of your files silently. Click
+> When you come back, your browser may ask for permission to open the folder again. That is normal
+> and deliberate: a web page is never allowed to keep hold of your files silently. Click
 > **Reopen** and everything is as you left it.
 
 ## Where your work lives
@@ -60,8 +63,7 @@ Inside the folder you chose, αtmos keeps:
 | `exports/` | the sound files you export |
 
 You can copy, back up or move this folder like any other. Nothing in αtmos is stored anywhere
-else, and nothing is sent anywhere. The one exception is searching Freesound, which of course
-talks to Freesound.
+else, and nothing is sent anywhere, with one exception: a Freesound search goes to Freesound.
 
 ## Managing your compositions
 
@@ -88,9 +90,9 @@ own way of playing:
 - **At intervals** — it plays every so many seconds.
 - **Random** — it plays at unpredictable moments, roughly as often as you ask.
 
-**Effects** opens a panel that begins with ready-made places: *Behind a window*, *In a big room*,
-*In a cathedral*, *In a cave*, *Across a valley*, *Under water*, *Drifting around you*. Pick one and
-the sliders beneath move to match; from there you can adjust anything by hand. The ▶ button on a
+**Effects** opens a panel that begins with nine ready-made places, such as *Behind a window*,
+*In a cathedral*, *Across a valley* or *Under water*. Pick one and the sliders beneath move to
+match; from there you can adjust anything by hand. The ▶ button on a
 sound plays that sound on its own, over and over, so you can hear a change as you make it.
 
 ## Freesound
@@ -117,9 +119,9 @@ you — particularly if you publish or sell what you make.
 | `Space` | play / stop |
 | `Ctrl+S` | save now (αtmos also saves by itself) |
 | `Ctrl+Z` | undo removing a sound, while the message is on screen |
-| `F2` | rename the composition under the cursor, on the list |
+| `F2` | on the list, rename the composition that has the keyboard focus |
 | `Ctrl+D` | duplicate it |
-| `Delete` | archive it · `Shift+Delete` delete it for good |
+| `Delete` | archive it · `Shift+Delete` asks to delete it for good |
 | `Esc` | close a dialog, an opened tile, or immersion |
 | `F` | full screen, in immersion |
 | `↑` `↓` | on a sound's drag handle, move it up or down the list |
@@ -148,9 +150,10 @@ python -m http.server
 npx serve
 ```
 
-The app is four files: `index.html`, `css/app.css`, `js/app.js` (a classic script, not a module)
-and the fonts in `assets/`. All paths are relative, so it also works from a sub-path such as
-GitHub Pages.
+The app is `index.html`, `css/app.css` and `js/app.js` (a classic script, not a module), with
+the fonts and icons in `assets/`. `sw.js` and `manifest.webmanifest` make it installable and
+usable offline; the service worker registers only over https or on localhost. All paths are
+relative, so it also works from a sub-path such as GitHub Pages.
 
 A composition is a JSON file like this:
 
