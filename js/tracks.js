@@ -157,6 +157,7 @@ function renderTrack(t) {
   const where = placeOf(t);
   const nameAttr = esc(t.name);
   el.innerHTML = `
+    <span class="tbg" aria-hidden="true"></span>
     <div class="trow">
       <span class="grip" tabindex="0" role="button" title="Drag to move it, or use the up and down arrow keys" aria-label="Move ${nameAttr}"><span class="num">${num2(at)}</span>${ICO.grip}</span>
       <button class="pic test${t.pv ? ' on' : ''}" aria-pressed="${!!t.pv}" ${t.buffer ? '' : 'disabled'}><span class="pimg"></span><span class="pglyph">${t.pv ? ICO.stop : ICO.play}</span></button>
@@ -438,6 +439,8 @@ function replaceEl(t) {
   const ob = t.el.querySelector('.pimg'), nb = n.querySelector('.pimg');
   if (t.img && ob && nb && ob.classList.contains('show') && ob.dataset.url === t.img.url) {
     nb.style.backgroundImage = ob.style.backgroundImage; nb.dataset.url = ob.dataset.url; nb.classList.add('show');
+    const wide = n.querySelector('.tbg'); if (wide) wide.style.backgroundImage = ob.style.backgroundImage;
+    n.classList.add('has-pic');
   }
   t.el.replaceWith(n); t.el = n;
   updateLive(); updateWhyOff(); applyFind();
@@ -579,19 +582,24 @@ function paintTrackImage(t, el = t.el) {
   if (!bg) return Promise.resolve();
   const th = el.querySelector('.pthumb');
   if (th) th.style.backgroundImage = t.img && t.img.url ? cssUrl(t.img.url) : '';
-  if (!t.img) { bg.classList.remove('show'); bg.style.backgroundImage = ''; bg.dataset.url = ''; return Promise.resolve(); }
+  // the same picture, large, behind the whole line and its open settings
+  const wide = el.querySelector('.tbg');
+  const show = url => { bg.style.backgroundImage = cssUrl(url); bg.dataset.url = url; bg.classList.add('show');
+    if (wide) wide.style.backgroundImage = cssUrl(url); el.classList.add('has-pic'); };
+  const hide = () => { bg.classList.remove('show'); el.classList.remove('has-pic'); };
+  if (!t.img) { hide(); bg.style.backgroundImage = ''; bg.dataset.url = ''; return Promise.resolve(); }
   if (t.img.local && !t.img.url) {
     // your own image, saved in the folder: read it first, then show it
     const want = t.img;
     return readFile(want.local).then(f => { if (t.img === want) { want.url = URL.createObjectURL(f); return paintTrackImage(t, t.el || el); } })
-      .catch(() => { bg.classList.remove('show'); });
+      .catch(hide);
   }
   const url = t.img.url;
-  if (bg.dataset.url === url) { bg.classList.add('show'); return Promise.resolve(); }
+  if (bg.dataset.url === url) { show(url); return Promise.resolve(); }
   const im = new Image();
   im.src = url;
   // decoded before it is drawn, so it appears whole
-  return im.decode().then(() => { if (t.img && t.img.url === url) { bg.style.backgroundImage = cssUrl(url); bg.dataset.url = url; bg.classList.add('show'); } }, () => {});
+  return im.decode().then(() => { if (t.img && t.img.url === url) show(url); }, () => {});
 }
 let imgTarget = null;
 async function setOwnImage(t, file) {
