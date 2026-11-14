@@ -199,7 +199,8 @@ function updateLive() {
   updateSoloNote(); updateMeta();
 }
 function fadeLen(t, d) {
-  if (t.mode === 'loop') return t.crossfade ? Math.min(t.fade, d / 3) : 0;
+  // Continuous: the chosen fade, or else a 10 ms join so the jump from the last sample to the first one does not click
+  if (t.mode === 'loop') return Math.min(t.crossfade ? Math.max(0.01, t.fade) : 0.01, d / 3);
   // At intervals / Random: soft start and end (at least 20 ms, to avoid clicks)
   return Math.min(Math.max(0.02, t.hitFade || 0), d / 2.05);
 }
