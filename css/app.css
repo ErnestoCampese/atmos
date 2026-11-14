@@ -545,6 +545,8 @@ p.count{margin-top:auto;padding-block:var(--s2);color:var(--mute);font-size:13px
 /* over a picture the printed rules and the edges of the controls are light let through, not a fixed grey:
    on the dark they look as they always do, on the picture they stay visible */
 .track.has-pic{--rule:rgb(255 255 255/.09);--line:rgb(255 255 255/.16)}
+/* and the ground of the controls (choices, menus, numbers) lets a little of the picture through, so they sit on it lightly */
+.track.has-pic{--field:rgb(23 21 27/.68)}
 /* open, the picture shows more, so the quiet words of the settings are lit one step, enough to read over its brightest parts */
 .track.has-pic.is-open{background:var(--card2);--mute:var(--ink2);--mute-lit:var(--ink2)}
 .track.has-pic.is-open>.tbg{opacity:.17;--pic-l:1}
