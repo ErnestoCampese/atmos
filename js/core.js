@@ -265,6 +265,17 @@ function paintRange(el) {
 }
 const paintRanges = (el = document) => el.querySelectorAll('input[type=range]').forEach(paintRange);
 document.addEventListener('input', e => { if (e.target.type === 'range') paintRange(e.target); }, true);
+/* Escape while a menu's list is open closes that list and nothing else: the settings or the panel it sits in stay.
+   (The browser still closes the list itself; only the page's own handlers stop hearing this key.) */
+window.addEventListener('keydown', e => {
+  // while the list is open the focus is on one of its lines, inside the menu
+  const sel = e.key === 'Escape' && e.target instanceof Element ? e.target.closest('select') : null; if (!sel) return;
+  let open = false; try { open = sel.matches(':open'); } catch (err) {}
+  if (!open) return;
+  e.stopPropagation();
+  // once the list has closed, the focus goes back to the menu itself, so the next key carries on from there
+  setTimeout(() => { if (sel.isConnected && document.activeElement !== sel) sel.focus({ preventScroll: true }); });
+}, true);
 
 /* the width of the page's scrollbar, for anything that spans the window (0 where scrollbars take no room) */
 {
