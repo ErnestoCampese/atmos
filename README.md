@@ -1,10 +1,14 @@
-# αtmos
+![αtmos. Compose your own atmosphere.](assets/readme-banner.svg)
 
-Compose your own atmosphere.
+αtmos is for people who write. Build the sound of the place you are writing about: rain against
+a window, wind, voices in the next room, a bell far off. Give it a name and a picture, press play,
+and leave it on while you write.
 
-αtmos is a mixer for ambient soundscapes. Layer rain, wind, distant voices and bells into a
-world of your own, set each sound's volume, place it to the left or right, give it an echo or
-put it behind a window — then let it play while you work, write or dream.
+Each sound has its own place in the scene. It can be louder or softer, sit to your left or your
+right, and play all the time or come back now and then. It can sound as if it were behind a
+window, in a cathedral or across a valley.
+
+To see the place as well as hear it, open its picture full-window, with effects over it.
 
 Everything you make is saved into a folder **on your own computer**. Nothing is uploaded, there
 is no account, and there is nothing to install unless you want to.
@@ -85,16 +89,17 @@ Your sounds are never touched by any of this.
 Each sound in a composition has its own volume, its own position between left and right, and its
 own way of playing:
 
-- **Continuous** — it loops without stopping. Turn on **Seamless** and αtmos finds the point
+- **Continuous** — it loops without stopping. Turn on **Hide the join** and αtmos finds the point
   where the end flows back into the beginning, so there is no seam to hear.
 - **At intervals** — it plays every so many seconds.
-- **Random** — it plays at unpredictable moments, roughly as often as you ask.
+- **At random** — it plays at unpredictable moments, roughly as often as you ask.
 
-**Effects** opens a panel that begins with eight ready-made places, such as *Behind a window*,
-*In a cathedral*, *Across a valley* or *Under water*. Pick one and the sliders beneath move to
-match; from there you can adjust anything by hand. *No effects*, set apart before them, turns
-every effect off. The ▶ button on a
-sound plays that sound on its own, over and over, so you can hear a change as you make it.
+**Settings**, at the end of a sound's line, opens its panel. *Where it is* offers eight ready-made
+places, such as *Behind a window*, *In a cathedral*, *Across a valley* or *Under water*. Pick one
+and the seven effects under it are set to match; from there you can change any of them, choosing
+how much in words: *Off*, *A little*, *Medium*, *Strong*. *No effects*, first in the list, turns
+every effect off. The ▶ button on a sound plays that sound on its own, over and over, so you can
+hear a change as you make it; **Only this** silences every other sound while the composition plays.
 
 ## Freesound
 
@@ -142,8 +147,9 @@ python -m http.server
 npx serve
 ```
 
-The app is `index.html`, `css/app.css` and `js/app.js` (a classic script, not a module), with
-the fonts and icons in `assets/`. `sw.js` and `manifest.webmanifest` make it installable and
+The app is `index.html`, `css/app.css` and the scripts in `js/` (classic scripts, not modules, loaded in order by
+`index.html`), with
+the fonts and the app icons in `assets/`. `sw.js` and `manifest.webmanifest` make it installable and
 usable offline; the service worker registers only over https or on localhost. All paths are
 relative, so it also works from a sub-path such as GitHub Pages.
 
@@ -183,5 +189,6 @@ A composition is a JSON file like this:
 αtmos is open source under the [MIT licence](LICENSE) — you may use, change and share it freely,
 keeping the copyright notice.
 
-The two typefaces it ships, Literata and Hanken Grotesk, are under the SIL Open Font License 1.1.
+The two typefaces it ships, Alegreya and Hanken Grotesk, are under the SIL Open Font License 1.1,
+and its interface icons come from [Lucide](https://lucide.dev), under the ISC licence.
 See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
