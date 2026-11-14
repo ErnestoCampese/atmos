@@ -3,7 +3,21 @@ const $ = id => document.getElementById(id);
 const AC = window.AudioContext || window.webkitAudioContext;
 const ctx = new AC();
 const master = ctx.createGain();
-master.connect(ctx.destination);
+limitTo(ctx, master);
+/* A gentle limiter between the master volume and the output, for playback and for exported files
+   alike. With many sounds at once their levels add up and the peaks would crackle; this holds down
+   only what goes above -3 dB and leaves everything below as it is. The browser's compressor adds
+   some loudness of its own to make up for what it takes away; the gain after it removes exactly
+   that, so a quiet mix comes out at the level it went in. */
+function limitTo(context, from) {
+  const THRESHOLD = -3, RATIO = 20;
+  const lim = context.createDynamicsCompressor();
+  lim.threshold.value = THRESHOLD; lim.knee.value = 0; lim.ratio.value = RATIO;
+  lim.attack.value = 0.003; lim.release.value = 0.25;
+  const trim = context.createGain();
+  trim.gain.value = Math.pow(10, THRESHOLD * (1 - 1 / RATIO) * 0.6 / 20);
+  from.connect(lim); lim.connect(trim); trim.connect(context.destination);
+}
 
 const AUDIO_RE = /\.(mp3|wav|ogg|oga|flac|m4a|aac|opus|webm)$/i;
 const LOOKAHEAD = 3;
@@ -69,7 +83,7 @@ function hideToast() {
 $('toast').addEventListener('animationend', e => {
   if (e.animationName === 'toast-out') e.currentTarget.classList.remove('leave', 'has-act');
 });
-function show(v) { ['vWelcome', 'vHome', 'vEditor'].forEach(id => $(id).hidden = id !== v); $('atmo').hidden = v !== 'vEditor'; $('sky').dataset.view = v; window.scrollTo(0, 0); }
+function show(v) { ['vWelcome', 'vHome', 'vEditor'].forEach(id => $(id).hidden = id !== v); $('atmo').hidden = v !== 'vEditor'; $('foot').hidden = v === 'vEditor'; $('sky').dataset.view = v; window.scrollTo(0, 0); }
 
 /* icons */
 const svg = (d, o = 'fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"') => `<svg viewBox="0 0 24 24" ${o} aria-hidden="true">${d}</svg>`;
@@ -2334,7 +2348,7 @@ async function exportMix() {
   try {
     const secs = +$('exDur').value * 60, sr = ctx.sampleRate, vol = c.volume;
     const off = new OfflineAudioContext(2, Math.ceil(secs * sr), sr);
-    const m = off.createGain(); m.connect(off.destination);
+    const m = off.createGain(); limitTo(off, m);
     if ($('exFade').checked) {
       const f = Math.min(4, secs / 4);
       m.gain.setValueAtTime(0, 0); m.gain.linearRampToValueAtTime(vol, f);
@@ -2737,6 +2751,8 @@ document.addEventListener('dblclick', e => {
 /* Keeps a copy of the app's own files so it opens without a connection, and lets it be
    installed like an ordinary program. Only where the browser allows it: never from a page
    opened straight off the disk. */
+// the version in the footer is the one in sw.js, so a single number identifies a release
+fetch('sw.js').then(r => r.ok ? r.text() : '').then(t => { const m = /VERSION = 'atmos-(v\d+)'/.exec(t); if (m) $('footVer').textContent = m[1]; }).catch(() => {});
 if ('serviceWorker' in navigator &&
     (location.protocol === 'https:' || ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname))) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
