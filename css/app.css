@@ -112,7 +112,9 @@ svg{flex:none;width:16px;height:16px}
 .welcome .fine{color:var(--muted);font-size:13px;margin:var(--s4) 0 0;max-width:60ch}
 
 /* ---------- the sky: three depths of out-of-focus light ----------
-   Far lights are large and soft, near ones small and sharp. They drift slowly, and each depth
+   Far lights are large and soft, near ones small and sharp. Each wanders on its own along a soft
+   curve: it sways sideways and up and down at two different paces, so the path does not visibly
+   repeat, and the nearer a light is the further it travels (--k) — as with the parallax. Each depth
    shifts by a different amount with the pointer and with scrolling, which gives the page its parallax. */
 .sky{position:fixed;inset:0;z-index:-2;overflow:hidden;pointer-events:none;--px:0;--py:0;--sy:0}
 .sky .depth{position:absolute;inset:-6%;transition:transform 1.4s cubic-bezier(.16,.84,.3,1);will-change:transform}
@@ -120,12 +122,19 @@ svg{flex:none;width:16px;height:16px}
 .sky .mid{transform:translate3d(calc(var(--px) * -20px),calc(var(--py) * -20px + var(--sy) * -.09px),0)}
 .sky .near{transform:translate3d(calc(var(--px) * -42px),calc(var(--py) * -42px + var(--sy) * -.2px),0)}
 .sky i{position:absolute;left:var(--x);top:var(--y);width:var(--s);height:var(--s);margin:calc(var(--s) / -2);border-radius:50%;background:var(--c,var(--glow));
-  mix-blend-mode:var(--sky-blend);animation:drift var(--d,40s) ease-in-out var(--w,0s) infinite alternate}
+  mix-blend-mode:var(--sky-blend);--t:calc(var(--d,40s) * .42);
+  animation:drift-x var(--t) ease-in-out var(--w,0s) infinite alternate,drift-y calc(var(--t) * .73) ease-in-out var(--w,0s) infinite alternate}
+.sky .far i{--k:1.4}
+.sky .mid i{--k:2.4}
+.sky .near i{--k:2}
 .sky .far i{background:radial-gradient(closest-side,var(--c,var(--glow)) 0%,color-mix(in srgb,var(--c,var(--glow)) 45%,transparent) 45%,transparent 100%);opacity:var(--sky-far)}
 /* no solid core: a light out of focus, not a coloured sticker */
-.sky .mid i{background:radial-gradient(closest-side,var(--c,var(--glow)) 0%,color-mix(in srgb,var(--c,var(--glow)) 55%,transparent) 38%,transparent 100%);opacity:var(--sky-mid)}
-.sky .near i{opacity:var(--sky-near);box-shadow:0 0 calc(var(--s) * 2.2) calc(var(--s) * .5) var(--glow-soft);animation-name:drift,twinkle;animation-duration:var(--d,40s),calc(var(--d,40s) / 5);mix-blend-mode:normal}
-@keyframes drift{from{translate:0 0}to{translate:var(--dx,24px) var(--dy,-36px)}}
+.sky .mid i{background:radial-gradient(closest-side,var(--c,var(--glow)) 0%,color-mix(in srgb,var(--c,var(--glow)) 55%,transparent) 38%,transparent 100%);opacity:var(--sky-mid);
+  animation-name:drift-x,drift-y,glimmer;animation-duration:var(--t),calc(var(--t) * .73),calc(var(--t) * .61)}
+.sky .near i{opacity:var(--sky-near);box-shadow:0 0 calc(var(--s) * 2.2) calc(var(--s) * .5) var(--glow-soft);animation-name:drift-x,drift-y,twinkle;animation-duration:var(--t),calc(var(--t) * .73),calc(var(--d,40s) / 5);mix-blend-mode:normal}
+@keyframes drift-x{from{translate:calc(var(--dx,24px) * var(--k,1) * -.5) 0}to{translate:calc(var(--dx,24px) * var(--k,1) * .5) 0}}
+@keyframes drift-y{from{transform:translateY(calc(var(--dy,-36px) * var(--k,1) * -.5))}to{transform:translateY(calc(var(--dy,-36px) * var(--k,1) * .5))}}
+@keyframes glimmer{from{opacity:calc(var(--sky-mid) * .55)}to{opacity:var(--sky-mid)}}
 @keyframes twinkle{0%,100%{opacity:calc(var(--sky-near) * .25)}50%{opacity:var(--sky-near)}}
 /* the top strip holds text: no light is allowed to drift behind it */
 .sky::before{content:"";position:absolute;z-index:1;inset:0 0 auto;height:112px;background:linear-gradient(var(--bg) 42%,transparent)}
@@ -773,6 +782,7 @@ input[type=range].imm-vol::-moz-range-thumb{width:14px;height:14px;border:0;back
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}
   .sky .depth{transition:none;transform:none!important}
+  .sky i,.sky .mid i,.sky .near i{animation:none}
   .name{transition:none}
   .seg-pill{transition:none}
   .track.enter{animation:none}
