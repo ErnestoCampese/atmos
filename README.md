@@ -17,7 +17,7 @@ is no account, and there is nothing to install unless you want to.
 
 ![Your compositions, each with its own cover](assets/screenshots/compositions.png)
 
-![A composition open, playing, with the effects panel showing its ready-made places](assets/screenshots/editor.png)
+![A composition open, playing, with the settings of one sound unfolded under its line](assets/screenshots/editor.png)
 
 ---
 
