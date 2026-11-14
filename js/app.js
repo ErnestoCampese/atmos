@@ -160,6 +160,13 @@ function paintRange(el) {
 const paintRanges = (el = document) => el.querySelectorAll('input[type=range]').forEach(paintRange);
 document.addEventListener('input', e => { if (e.target.type === 'range') paintRange(e.target); }, true);
 
+/* the width of the page's scrollbar, for anything that spans the window (0 where scrollbars take no room) */
+{
+  const root = document.documentElement;
+  const sbw = () => root.style.setProperty('--sbw', Math.max(0, innerWidth - root.clientWidth) + 'px');
+  sbw();
+  if ('ResizeObserver' in window) new ResizeObserver(sbw).observe(root); else window.addEventListener('resize', sbw);
+}
 /* parallax: the lights in the sky shift a little with the pointer and with scrolling, each depth by a different amount */
 if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
   let waiting = false, px = 0, py = 0;
@@ -2550,9 +2557,12 @@ const FX = {
 
 let fxRAF = null, fxParts = [], fxDef = null, fxLast = 0, fxW = 0, fxH = 0, immOpen = false, idleT = null;
 function fxCtx() { return $('immFx').getContext('2d'); }
+// sized from the immersion layer itself (not the window, which includes a scrollbar), plus the
+// parallax margin on every side
 function sizeFx() {
-  const c = $('immFx'), d = Math.min(2, window.devicePixelRatio || 1);
-  fxW = innerWidth; fxH = innerHeight;
+  const c = $('immFx'), d = Math.min(2, window.devicePixelRatio || 1), el = $('imm');
+  const pad = parseFloat(getComputedStyle(el).getPropertyValue('--fx-pad')) || 0;
+  fxW = el.clientWidth + 2 * pad; fxH = el.clientHeight + 2 * pad;
   c.width = Math.round(fxW * d); c.height = Math.round(fxH * d);
   fxCtx().setTransform(d, 0, 0, d, 0, 0);
 }
@@ -2627,6 +2637,8 @@ async function openImmersion() {
   $('immTitle').textContent = $('title').value.trim() || 'Untitled';
   setMasterUI();
   setImmBg(); renderFxChips();
+  immScroll = scrollY;
+  document.documentElement.classList.add('imm-lock');
   el.hidden = false;
   requestAnimationFrame(() => el.classList.add('show'));
   startFx(cur.effect);
@@ -2636,7 +2648,7 @@ async function openImmersion() {
   setTimeout(() => { try { $('immPlay').focus(); } catch (e) {} }, 60);
   if (!playing) start();
 }
-let immReturn = null;
+let immReturn = null, immScroll = 0;
 function immFocusables() {
   return [...$('imm').querySelectorAll('button:not([hidden]):not([disabled]), input:not([disabled])')]
     .filter(x => x.offsetParent !== null || x === document.activeElement);
@@ -2648,6 +2660,8 @@ function closeImmersion() {
   el.classList.remove('show', 'idle');
   clearTimeout(idleT);
   if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  document.documentElement.classList.remove('imm-lock');
+  window.scrollTo(0, immScroll);            // the editor is exactly where it was left
   if (immReturn && immReturn.isConnected) try { immReturn.focus(); } catch (e) {}
   immReturn = null;
   setTimeout(() => { if (!immOpen) { el.hidden = true; stopFx(); } }, 700);
@@ -2691,7 +2705,8 @@ document.addEventListener('keydown', e => {
   e.preventDefault();
   f[(i + (e.shiftKey ? -1 : 1) + f.length) % f.length].focus();
 }, true);
-window.addEventListener('resize', () => { if (immOpen && fxDef) startFx(cur.effect); });
+if ('ResizeObserver' in window) new ResizeObserver(() => { if (immOpen && fxDef) startFx(cur.effect); }).observe($('imm'));
+else window.addEventListener('resize', () => { if (immOpen && fxDef) startFx(cur.effect); });
 
 window.addEventListener('beforeunload', e => { if (cur && (cur.dirty || saveFail)) { e.preventDefault(); e.returnValue = ''; } });
 
