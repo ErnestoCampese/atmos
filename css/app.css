@@ -1060,13 +1060,18 @@ input[type=range].imm-vol::-webkit-slider-thumb{box-shadow:0 0 12px rgba(0,0,0,.
   .fx-row{grid-template-columns:96px 272px minmax(0,1fr);column-gap:var(--s3)}
   .fx-amt{width:272px}
 }
-/* a narrow list: a sound becomes two lines, who it is, then how loud and what is inside */
-@container tracks (max-width:608px){
-  .tl-head .find{flex:1 1 auto}
+/* a narrow list: a sound becomes two lines, who it is, then how loud and what is inside.
+   Below 720px a single line leaves the name too little room: its status ("5 effects") would be cut.
+   Its settings keep their columns down to 608px, where they still fit at their natural size. */
+@container tracks (max-width:719px){
   .trow{grid-template-columns:28px 49px minmax(0,1fr) auto auto;grid-template-areas:"n p nm nm nm" ". vol vol only op";row-gap:var(--s2);padding-block:var(--s3)}
   .trow>.grip{grid-area:n}.trow>.pic{grid-area:p}.trow>.nmcol{grid-area:nm}.trow>.volw{grid-area:vol}.trow>.only{grid-area:only}.trow>.opener{grid-area:op}
   .trow>.warn{grid-column:3/-1}
   .volw .vol{flex:1 1 64px;width:auto}
+}
+/* narrower still, the settings become one column */
+@container tracks (max-width:608px){
+  .tl-head .find{flex:1 1 auto}
   .fx-own{display:flex;flex-direction:column}
   .fx-how>select{flex:0 0 100%;width:100%}
   .fx-how .opts:has(input[type=number]){flex:0 0 100%}

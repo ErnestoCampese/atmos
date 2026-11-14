@@ -7,7 +7,7 @@
    When a new version is published, the page itself is fetched from the network first, so anyone
    who already has the app gets the new one as soon as they are online. */
 
-const VERSION = 'atmos-v45';
+const VERSION = 'atmos-v46';
 const SHELL = [
   './',
   'index.html',
