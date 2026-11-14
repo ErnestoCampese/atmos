@@ -24,6 +24,9 @@ index-old-italian.html
 CLAUDE_CODE_BRIEF.md
 .dev/
 .claude/
+.impeccable/
+PRODUCT.md
+DESIGN.md
 node_modules/
 
 # Secrets
