@@ -39,7 +39,7 @@
   --ember:#d4705f; --ember-ink:#ecc2b8; --on-ember:#2a0d08; --ember-hi:#de8473; --ember-tint:rgba(212,112,95,.12);
   /* the work is safe in the folder: the save dot, and the "done" sign of a message */
   --saved:#7fae86;
-  --plum:#2a213a; --shadow:rgba(4,3,6,.66); --scrim:rgba(10,8,12,.66);
+  --plum:#2a213a; --shadow:rgba(4,3,6,.66); --scrim:rgba(10,8,12,.66); --menu:rgba(29,26,33,.96);
   --serif:"Alegreya","Iowan Old Style","Palatino Linotype",Georgia,serif;
   --ui:"Hanken Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   /* motion: quick for a state, a little slower for a place changing */
@@ -71,7 +71,11 @@ h1,h2,h3,h4{margin:0}
 p{margin:0}
 /* one focus ring everywhere: ink on night. Gold is never used for focus — gold means "this is sounding". */
 :focus-visible{outline:2px solid var(--ink);outline-offset:2px}
-input:focus-visible,select:focus-visible{outline-offset:1px}
+/* a field wears its focus ring on its own edge, one line, never a second ring around the first;
+   while its list is open the list itself shows where you are, so the edge is only lit */
+input:focus-visible{outline-offset:1px}
+select:focus-visible,input[type=number]:focus-visible{outline-offset:-1px}
+select:open{outline:none;border-color:var(--mute)}
 ::selection{background:rgba(233,228,218,.24);color:var(--ink)}
 input,textarea,[contenteditable]{caret-color:var(--ink)}
 svg{flex:none;width:16px;height:16px}
@@ -549,7 +553,7 @@ p.count{margin-top:auto;padding-block:var(--s2);color:var(--mute);font-size:13px
 .track.has-pic{--field:rgb(23 21 27/.68)}
 /* over a light picture the controls turn to light glass: a pale see-through ground and a brighter edge,
    the look "Settings" has when it is open. "Only this" keeps its own colours while it is on. */
-.track.pic-light{--field:rgb(255 255 255/.07);--rule:rgb(255 255 255/.12);--line:rgb(255 255 255/.24);--edge:rgb(255 255 255/.28)}
+.track.pic-light{--field:rgb(255 255 255/.07);--rule:rgb(255 255 255/.12);--line:rgb(255 255 255/.24);--edge:rgb(255 255 255/.28);--menu:rgb(72 68 78/.55)}
 .track.pic-light :is(.chip,.opener,.ghost):not([aria-checked="true"]):not(:disabled){background:rgb(255 255 255/.08);border-color:var(--line);color:var(--ink)}
 .track.pic-light :is(.chip,.opener,.ghost):not([aria-checked="true"]):not(:disabled):hover,
 .track.pic-light .opener[aria-expanded="true"]{background:rgb(255 255 255/.14);border-color:var(--mute)}
@@ -655,6 +659,23 @@ select{-webkit-appearance:none;appearance:none;padding:0 var(--s6) 0 var(--s2);c
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238c8693' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right var(--s2) center;background-size:16px}
 select option{background:var(--card);color:var(--ink)}
+/* The open list of a menu, drawn by the page where the browser allows it (Chrome and Edge 135 and later), in the
+   app's own glass, like its other menus: the line under the pointer lit, the chosen one marked with a dot.
+   Its ground is --menu, so a sound over a light picture can turn it to frost with the rest of its controls.
+   Elsewhere the browser's own list stays, in the dark of the cards. */
+@supports (appearance:base-select){
+  select,::picker(select){-webkit-appearance:base-select;appearance:base-select}
+  select{display:inline-flex;align-items:center}
+  select::picker-icon{display:none}
+  ::picker(select){margin-block:var(--s1);padding:var(--s1);border:1px solid var(--line);border-radius:var(--r-card);color:var(--ink);
+    background:var(--menu);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);box-shadow:0 20px 50px -20px #000;animation:pop-menu .18s var(--ease)}
+  select option{display:flex;align-items:center;justify-content:space-between;gap:var(--s4);min-height:32px;padding:0 var(--s3);
+    border-radius:var(--r-ctl);background:transparent;color:var(--ink2);font-size:13px;cursor:pointer}
+  select option::checkmark{display:none}
+  select option:hover,select option:focus-visible{background:var(--hover-strong);color:var(--ink);outline:none}
+  select option:checked{color:var(--ink);font-weight:600}
+  select option:checked::after{content:"";flex:none;width:6px;height:6px;border-radius:50%;background:var(--ink)}
+}
 select:disabled,input[type=number]:disabled{border-color:var(--rule);color:var(--mute);cursor:not-allowed}
 input[type=number]{width:64px;padding:0 var(--s2);text-align:center;-moz-appearance:textfield;font-variant-numeric:tabular-nums}
 input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
@@ -758,7 +779,8 @@ input[type=range]:disabled{cursor:not-allowed;--fill:var(--mute);--rail:var(--ru
 .side{position:relative;align-self:center}
 /* the slider is still there for the keyboard and for screen readers; the eye uses the dot */
 .side .pan{position:absolute;inset:0;width:100%;height:100%;opacity:0;pointer-events:none}
-.side-fig{display:block;width:200px;height:112px;overflow:visible;fill:none;stroke:var(--mute);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;cursor:pointer;touch-action:none}
+.side-fig{display:block;width:200px;height:112px;overflow:visible;fill:none;stroke:var(--mute);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-user-drag:none}
+.side-fig.held,.side-fig.held .sf-dot{cursor:grabbing}
 .sf-hit{fill:transparent;stroke:none;pointer-events:all}
 .sf-arc{stroke:var(--edge);stroke-dasharray:2 4}
 .sf-lr{fill:var(--mute);stroke:none;font:500 10px var(--ui)}

@@ -319,8 +319,16 @@ function renderTrack(t) {
     pan.value = Math.round(Math.max(-1, Math.min(1, Math.atan2(x, Math.max(y, 0)) / (Math.PI / 2))) * 100);
     pan.dispatchEvent(new Event('input', { bubbles: true }));
   };
-  fig.onpointerdown = e => { fig.setPointerCapture(e.pointerId); figTo(e); };
+  // the press belongs to the drawing alone: no text selection, no browser drag of it as an image.
+  // The hidden slider takes the focus, so the arrow keys carry on from where the pointer left the dot.
+  fig.onpointerdown = e => {
+    if (e.button !== 0) return;
+    e.preventDefault(); q('.pan').focus({ preventScroll: true });
+    fig.setPointerCapture(e.pointerId); fig.classList.add('held'); figTo(e);
+  };
   fig.onpointermove = e => { if (fig.hasPointerCapture(e.pointerId)) figTo(e); };
+  fig.onlostpointercapture = () => fig.classList.remove('held');
+  fig.ondragstart = e => e.preventDefault();
   if (q('.seam')) q('.seam').onchange = e => {
     t.seamless = e.target.checked;
     setTimeout(() => { applySeamless(t); replaceEl(t); markDirty(); }, 20);
