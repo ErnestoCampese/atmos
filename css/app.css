@@ -531,20 +531,22 @@ p.count{margin-top:auto;padding-block:var(--s2);color:var(--mute);font-size:13px
 /* passing quickly over many lines: the light comes in softly but leaves at once, so only one line is ever lit (issue #22) */
 .track:not(:hover)>.trow,.track:not(:hover) .grip svg,.track:not(:hover) .grip .num,.track:not(:hover) .opener{transition:none}
 .track.is-open>.trow{background:var(--card2)}
-/* The sound's own picture, behind its line: it rises from nothing on the left to its fullest on the right,
-   where the line has room to spare. When the settings open it spreads evenly behind the whole section, dimmer,
-   so the controls stay easy to read. --pic-l is how much of the picture the left side shows (0 at rest, 1 open). */
+/* The sound's own picture, behind its line, centred on it: barely there at rest, rising from nothing on the left
+   to a faint presence on the right. When the settings open it spreads evenly behind the whole section, centred on
+   it, and shows more, never so much that a control is hard to read.
+   --pic-l is how much of the picture the left side shows (0 at rest, 1 open). */
 @property --pic-l{syntax:"<number>";inherits:false;initial-value:0}
-.tbg{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:0;background:center 40%/cover no-repeat;--pic-l:0;
+.tbg{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:0;background:50% 50%/cover no-repeat;--pic-l:0;
   -webkit-mask-image:linear-gradient(90deg,rgb(0 0 0/var(--pic-l)) 10%,rgb(0 0 0/calc(.3 + var(--pic-l) * .7)) 50%,#000);
   mask-image:linear-gradient(90deg,rgb(0 0 0/var(--pic-l)) 10%,rgb(0 0 0/calc(.3 + var(--pic-l) * .7)) 50%,#000);
   transition:opacity var(--t-screen) var(--ease),--pic-l var(--t-screen) var(--ease)}
-.track.has-pic>.tbg{opacity:.4}
+.track.has-pic>.tbg{opacity:.14}
 /* over a picture the printed rules and the edges of the controls are light let through, not a fixed grey:
    on the dark they look as they always do, on the picture they stay visible */
 .track.has-pic{--rule:rgb(255 255 255/.09);--line:rgb(255 255 255/.16)}
-.track.has-pic.is-open{background:var(--card2)}
-.track.has-pic.is-open>.tbg{opacity:.16;--pic-l:1}
+/* open, the picture shows more, so the quiet words of the settings are lit one step, enough to read over its brightest parts */
+.track.has-pic.is-open{background:var(--card2);--mute:var(--ink2);--mute-lit:var(--ink2)}
+.track.has-pic.is-open>.tbg{opacity:.24;--pic-l:1}
 .track.has-pic>.trow{position:relative;z-index:1}
 .track.has-pic.is-open>.trow,.track.has-pic .fxp-in{background:transparent}
 .track.enter{animation:row-in .3s var(--ease) calc(var(--after,0s) + var(--i,0) * 35ms) both}
