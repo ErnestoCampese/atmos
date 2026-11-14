@@ -1,802 +1,1112 @@
-/* Typefaces, all under the SIL Open Font License 1.1 and embedded so the app works offline:
-   - Literata Italic (titles): Copyright 2017 The Literata Project Authors (github.com/googlefonts/literata).
-     A typeface made for reading books; here in its light italic, Latin subset.
-     The α of the wordmark is the Greek alpha of the same typeface.
-   - Hanken Grotesk (interface): Copyright 2021 The Hanken Grotesk Project Authors (github.com/marcologous/hanken-grotesk). */
-@font-face{font-family:"Literata";src:url(../assets/fonts/literata-italic.woff2) format("woff2");font-weight:300 450;font-style:italic;font-display:swap}
-@font-face{font-family:"Atmos Alpha";src:url(../assets/fonts/literata-italic-alpha.woff2) format("woff2");font-weight:300 450;font-style:italic;unicode-range:U+03B1;font-display:swap}
+/* αtmos — "Nastro per una scena": a composition is a tape made for one scene.
+   Its sounds are the tracklist written on the insert, and what is sounding now is marked by a gold pen stroke.
+
+   Typefaces, all under the SIL Open Font License 1.1 and kept in assets/fonts so the app works offline:
+   - Alegreya (the writer's words: titles, sound names, descriptions): Copyright 2011 The Alegreya Project
+     Authors (github.com/huertatipografica/Alegreya). Upright 400–500 and italic 400; the α of the wordmark
+     is its Greek alpha.
+   - Hanken Grotesk (every control): Copyright 2021 The Hanken Grotesk Project Authors
+     (github.com/marcologous/hanken-grotesk). */
+@font-face{font-family:"Alegreya";src:url(../assets/fonts/alegreya-roman-latin.woff2) format("woff2");font-weight:400 500;font-style:normal;font-display:swap;
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Alegreya";src:url(../assets/fonts/alegreya-roman-latin-ext.woff2) format("woff2");font-weight:400 500;font-style:normal;font-display:swap;
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C4,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"Alegreya";src:url(../assets/fonts/alegreya-roman-greek.woff2) format("woff2");font-weight:400 500;font-style:normal;font-display:swap;
+  unicode-range:U+0370-0377,U+037A-037F,U+0384-038A,U+038C,U+038E-03A1,U+03A3-03FF}
+@font-face{font-family:"Alegreya";src:url(../assets/fonts/alegreya-italic-latin.woff2) format("woff2");font-weight:400;font-style:italic;font-display:swap;
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Alegreya";src:url(../assets/fonts/alegreya-italic-latin-ext.woff2) format("woff2");font-weight:400;font-style:italic;font-display:swap;
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C4,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"Alegreya";src:url(../assets/fonts/alegreya-italic-greek.woff2) format("woff2");font-weight:400;font-style:italic;font-display:swap;
+  unicode-range:U+0370-0377,U+037A-037F,U+0384-038A,U+038C,U+038E-03A1,U+03A3-03FF}
 @font-face{font-family:"Hanken Grotesk";src:url(../assets/fonts/hanken-grotesk.woff2) format("woff2");font-weight:400 700;font-style:normal;font-display:swap}
 
-/* ---------- colours: ink and lamplight ----------
-   The app has one theme, night: deep writing-ink blue, a plum horizon, moon-white text.
-   Lamp gold is the only light that glows, and it is reserved for the wordmark and for whatever is sounding right now.
-   Dusk rose and iris appear only as distant, out-of-focus lights. */
+/* ---------- the insert at night ----------
+   Ground, insert stock and printed rules; ink for text, pencil for what is secondary.
+   One printed accent: gold, reserved for what is sounding (play while playing, the stroke under a
+   sounding name, a sound you are listening to alone). Ember marks a problem. */
 :root{
   color-scheme:dark;
-  --bg:#0d1222; --horizon-1:#1c2040; --horizon-2:#34284b;
-  --surface:#151b31; --raise:#20274a; --line:#2c3457; --text:#edeff8; --muted:#9ba1c0;
-  /* text2 is for secondary text that sits on a tint or a picture, where muted would be too faint;
-     text3 is for the controls of a sound that is silent, which are dimmed but must stay readable;
-     ctl draws the edge of everything you operate, and is deliberately stronger than the line colour. */
-  --text2:#c3c8de; --text3:#7a83b5; --ctl:#6f78ad;
-  --glow:#f2cf8d; --glow-ink:#f2cf8d; --glow-soft:rgba(242,207,141,.2); --on-glow:#2a1d05; --glow-rim:#f2cf8d;
-  --bloom-c:rgba(242,207,141,.18);
-  --dusk:#d8a7b1; --iris:#8e8bd8; --warn:#f08a7b; --on-warn:#2a0d08; --shadow:rgba(3,5,14,.6);
-  --scrim:rgba(5,7,16,.62);
-  --press:#d4d8ea; --hover-fill:#ffffff;
-  --sky-far:.2; --sky-mid:.22; --sky-near:.9; --sky-blend:screen;
-  --display:"Literata","Atmos Alpha","Iowan Old Style","Palatino Linotype",Georgia,serif;
+  --bg:#121014; --card:#1d1a21; --card-sheer:rgba(29,26,33,.86); --card2:#18161c; --field:#17151b; --rule:#2a2730; --line:#3a3641; --lift:#26232b;
+  --ink:#e9e4da; --ink2:#cfc8bb; --mute:#8c8693;
+  /* the ink pill under the pointer (paper lit from within) and pressed; and what is printed on it */
+  --ink-lit:#fff8ec; --ink-press:#d8d2c6; --on-ink:#17141b;
+  /* pencil on a line under the pointer: the tint lifts the stock, so the pencil lifts with it and stays at 4.5:1 */
+  --mute-lit:#a59eac;
+  /* the edge of what you type in or choose from: strong enough to find (3:1 on the insert) */
+  --edge:#6b6573;
+  --gold:#d8a845; --gold-hi:#f3d38c; --on-gold:#1b1408; --gold-soft:rgba(216,168,69,.22); --gold-bloom:rgba(216,168,69,.42);
+  --ember:#d4705f; --ember-ink:#ecc2b8; --on-ember:#2a0d08; --ember-hi:#de8473; --ember-tint:rgba(212,112,95,.12);
+  /* the work is safe in the folder: the save dot, and the "done" sign of a message */
+  --saved:#7fae86;
+  --plum:#2a213a; --shadow:rgba(4,3,6,.66); --scrim:rgba(10,8,12,.66);
+  --serif:"Alegreya","Iowan Old Style","Palatino Linotype",Georgia,serif;
   --ui:"Hanken Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  /* radii: controls, small containers, cards and rows, panels and dialogs */
-  --r-ctl:8px; --r-sm:12px; --r-row:16px; --r-panel:24px;
-  /* the one spacing scale: 4 8 12 16 24 32 48 64 */
-  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px; --s8:64px;
+  /* motion: quick for a state, a little slower for a place changing */
+  --ease:cubic-bezier(.25,1,.5,1); --ease-in:cubic-bezier(.5,0,.75,0);
+  --t-state:.14s; --t-panel:.24s; --t-screen:.32s; --t-leave:.18s;
+  /* radii: controls, small containers, things that float over a picture; and the printed structure of the
+     insert, which is cut square like card stock and edged with a printed hairline, never a soft rounded card */
+  --r-ctl:7px; --r-sm:8px; --r-card:10px; --r-print:2px; --r-pill:999px;
+  /* the one spacing scale */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px; --s8:64px; --s9:96px;
+  /* the two tints a surface takes under the pointer: a breath, and a firmer one for small controls */
+  --hover:rgba(255,255,255,.05); --hover-strong:rgba(255,255,255,.08);
+  /* the fibre of the insert stock: a faint grain, so the card reads as printed paper and not as a flat fill.
+     It only ever darkens, so no text printed on the stock loses contrast */
+  --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .16 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 /* ---------- base ---------- */
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-html{background:var(--bg)}
-/* the horizon: a faint plum light low in the sky, behind everything */
-body::before{content:"";position:fixed;inset:0;z-index:-3;pointer-events:none;
-  background:radial-gradient(120% 85% at 82% 118%,var(--horizon-2) 0%,var(--horizon-1) 36%,transparent 72%)}
-html,body{margin:0;color:var(--text)}
-body{font:14px/1.45 var(--ui);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;flex-direction:column}
-.wrap{position:relative;flex:1 0 auto;width:100%;max-width:1240px;margin:0 auto;padding:var(--s6) var(--s7) 96px}
-/* one quiet line at the foot of the welcome screen and of the list: the version and where the source is.
-   It shares the page's edges, and is not shown where work happens. */
-/* with the line below it, the page needs less empty room at its foot: the total stays about the same */
-.wrap:has(+ .foot:not([hidden])){padding-bottom:var(--s7)}
-.foot{display:flex;align-items:center;flex-wrap:wrap;gap:var(--s2);width:100%;max-width:1240px;margin:0 auto;padding:0 var(--s7) var(--s6);font-size:13px;color:var(--muted)}
-.foot a{display:inline-flex;align-items:center;gap:var(--s2);color:inherit;text-decoration:none;border-radius:var(--r-ctl)}
-.foot a:hover{color:var(--text);text-decoration:underline;text-underline-offset:4px}
-.foot svg{width:16px;height:16px;opacity:.6;transition:opacity .12s}
-.foot a:hover svg,.foot a:focus-visible svg{opacity:1}
+/* a plum light high on the left and a faint lamp low on the right, behind everything (on the root, so the sky can sit above it) */
+html{background:radial-gradient(1000px 560px at 14% -12%,rgba(42,33,58,.55),transparent 70%),radial-gradient(760px 440px at 96% 112%,rgba(216,168,69,.06),transparent 70%),var(--bg);background-attachment:fixed}
+html,body{margin:0;color:var(--ink)}
+body{font:400 14px/1.45 var(--ui);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;flex-direction:column}
 button{font:inherit;color:inherit;cursor:pointer}
 input,select{font:inherit;color:inherit}
-code{font:inherit;font-weight:600;color:var(--text)}
-h1,h2{margin:0;font-family:var(--display);font-style:italic;font-weight:400;letter-spacing:-.01em;line-height:1.25}
-/* one focus ring everywhere: moon-white on ink.
-   Gold is never used for focus — gold means "this is sounding". */
-:focus-visible{outline:2px solid var(--text);outline-offset:2px}
-input:focus-visible,select:focus-visible,.search:focus-visible{outline-offset:0}
-::selection{background:color-mix(in srgb,var(--text) 25%,transparent)}
-.row{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap}
-.grow{flex:1;min-width:0}
-/* Every icon is 16 px unless its own rule says otherwise. An SVG with no width and no height
-   stretches to fill whatever holds it, which once turned a warning triangle into a 698 px
-   shape filling a whole row; this is the net under that. */
+code{font:inherit;font-weight:600;color:var(--ink)}
+h1,h2,h3,h4{margin:0}
+p{margin:0}
+/* one focus ring everywhere: ink on night. Gold is never used for focus — gold means "this is sounding". */
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+input:focus-visible,select:focus-visible{outline-offset:1px}
+::selection{background:rgba(233,228,218,.24);color:var(--ink)}
+input,textarea,[contenteditable]{caret-color:var(--ink)}
 svg{flex:none;width:16px;height:16px}
+/* Lucide's square fills most of its box: drawn smaller, stop weighs the same as play beside it */
+svg.i-stop{scale:.64}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
-/* reachable by keyboard only: jumps past the long list of sounds */
 .skip{position:absolute;left:-9999px;top:0;z-index:40}
 .skip:focus{left:var(--s4);top:var(--s2)}
+.row{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap}
+
+.wrap{position:relative;z-index:1;flex:1 0 auto;width:100%;max-width:1440px;margin:0 auto;padding:var(--s4) var(--s7) var(--s9)}
+.wrap:has(+ .foot:not([hidden])){padding-bottom:var(--s7)}
+
+/* ---------- arriving: a screen appears only when it is complete, fading in ----------
+   The screen that leaves fades into the night first (--t-leave); the new one fades in after it, never
+   over it, so two screens are never seen through each other. Its rows wait for it (--after). */
+html.booting .wrap,html.booting .foot{opacity:0;animation:failsafe 0s 4s forwards}
+@keyframes failsafe{to{opacity:1}}
+.wrap,.foot{transition:opacity .42s var(--ease)}
+section.enter{animation:screen-in var(--t-screen) var(--ease) var(--after,0s) both}
+section.after{--after:var(--t-leave)}
+@keyframes screen-in{from{opacity:0;transform:translateY(6px)}}
+/* the screen that is leaving: a still copy, fading out before the one that arrives. The copy carries no
+   ids, so everything inside a screen is styled by class: the copy must look exactly like the screen it
+   replaces, or something in it (the name in the bar) jumps while it fades */
+.ghost-screen{position:fixed;z-index:0;margin:0;pointer-events:none;animation:screen-out var(--t-leave) var(--ease-in) forwards}
+@keyframes screen-out{to{opacity:0;transform:translateY(-4px)}}
+/* waiting for the next screen to be complete: the one on view stays, and only Cancel answers */
+html.opening .wrap{cursor:progress}
+html.opening .wrap *{cursor:inherit}
+html.opening .comp:not(.opening){pointer-events:none}
+.comp.opening{background:var(--hover);--mute:var(--mute-lit)}
+.comp.opening .cv::before{opacity:.75}
+.comp.opening .a:not(.open-cancel){display:none}
+.comp.opening .open-cancel{color:var(--ink2);cursor:pointer}
+.opening-say{font-size:13px;font-weight:500;color:var(--ink2);font-variant-numeric:tabular-nums;animation:fadein var(--t-panel) var(--ease)}
+
+/* a thin line along the top of the window while something is being read: only if it takes a while */
+.loadline{position:fixed;z-index:90;top:0;left:0;right:0;height:2px;pointer-events:none;opacity:0;transition:opacity .3s var(--ease)}
+.loadline.show{opacity:1}
+.loadline i{display:block;height:100%;width:100%;transform-origin:left;transform:scaleX(var(--p,0));transition:transform .3s var(--ease);
+  background:linear-gradient(90deg,rgba(216,168,69,0),var(--gold) 30%,var(--gold-hi))}
+.loadline.indet i{width:38%;transform:none;animation:sweep 1.5s var(--ease) infinite}
+@keyframes sweep{from{translate:-100% 0}to{translate:270% 0}}
+/* coming back with the folder still open: only the night, the gold line, and these words in the middle */
+.boot-say{position:fixed;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--s3);pointer-events:none;
+  font-size:13px;font-weight:500;color:var(--ink2);font-variant-numeric:tabular-nums;
+  opacity:0;visibility:hidden;transition:opacity var(--t-leave) var(--ease-in),visibility 0s var(--t-leave)}
+.boot-say.show{opacity:1;visibility:visible;transition:opacity .3s var(--ease)}
+.boot-say button{pointer-events:auto}
 
 /* ---------- buttons: three levels, one set of states ----------
-   primary   the one main action of a screen or panel
-   ghost     secondary: useful, not the point
-   quiet     text only
+   primary   the one main action of a screen or panel: an ink pill
+   ghost     secondary: an outlined plate, the edge of a printed box
+   quiet     words only, that gain a plate under the pointer
    danger    destructive; .danger.fill only for the last confirming click */
 .primary,.ghost,.quiet,.danger{display:inline-flex;align-items:center;justify-content:center;gap:var(--s2);
-  height:40px;padding:0 20px;border-radius:999px;font-size:14px;font-weight:600;white-space:nowrap;
-  transition:background .12s,border-color .12s,color .12s,box-shadow .12s,transform .06s}
-.primary{border:1px solid var(--text);background:var(--text);color:var(--bg)}
-.ghost{border:1px solid var(--ctl);background:var(--surface);color:var(--text)}
-.quiet{border:1px solid transparent;background:transparent;color:var(--text2);font-weight:500}
-.danger{border:1px solid var(--warn);background:transparent;color:var(--warn)}
-.primary:hover:not(:disabled){background:var(--hover-fill);border-color:var(--hover-fill);box-shadow:0 6px 18px -8px var(--shadow)}
-.ghost:hover:not(:disabled),.quiet:hover:not(:disabled){background:var(--raise);border-color:var(--text);color:var(--text)}
-.danger:hover:not(:disabled){background:color-mix(in srgb,var(--warn) 14%,transparent)}
-.primary:active:not(:disabled){background:var(--press);border-color:var(--press);box-shadow:none;transform:translateY(1px)}
-.ghost:active:not(:disabled),.quiet:active:not(:disabled),.danger:active:not(:disabled){background:var(--line);transform:translateY(1px)}
-.danger.fill{background:var(--warn);color:var(--on-warn)}
-.danger.fill:hover:not(:disabled){background:color-mix(in srgb,var(--warn) 86%,var(--text))}
-.primary:disabled,.ghost:disabled,.quiet:disabled,.danger:disabled{background:var(--raise);border-color:transparent;color:var(--text3);cursor:not-allowed;box-shadow:none;transform:none}
-.primary.sm,.ghost.sm,.quiet.sm,.danger.sm{height:32px;padding:0 14px;font-size:13px}
-.primary.lg,.ghost.lg{height:48px;padding:0 24px;font-size:15px}
-.primary svg,.ghost svg,.quiet svg,.danger svg{width:16px;height:16px}
+  height:40px;padding:0 var(--s4);font-size:14px;font-weight:500;white-space:nowrap;border-radius:var(--r-sm);
+  transition:background var(--t-state),border-color var(--t-state),color var(--t-state),box-shadow .3s var(--ease),transform .08s}
+.primary{border:1px solid var(--ink);background:var(--ink);color:var(--on-ink);border-radius:var(--r-pill);padding:0 var(--s5);font-weight:600}
+.primary svg{margin-left:calc(var(--s1) * -1)}
+.ghost{border:1px solid var(--line);background:transparent;color:var(--ink)}
+.quiet{border:1px solid transparent;background:transparent;color:var(--ink2)}
+.danger{border:1px solid var(--ember);background:transparent;color:var(--ember)}
+/* hover: the paper brightens and gives off a faint light of its own; a printed edge darkens to pencil */
+.primary:hover:not(:disabled){background:var(--ink-lit);border-color:var(--ink-lit);box-shadow:0 10px 30px -14px rgba(233,228,218,.42)}
+.ghost:hover:not(:disabled){border-color:var(--mute);background:var(--hover)}
+.quiet:hover:not(:disabled){background:var(--hover-strong);color:var(--ink)}
+.danger:hover:not(:disabled){background:var(--ember-tint)}
+.primary:active:not(:disabled),.ghost:active:not(:disabled),.quiet:active:not(:disabled),.danger:active:not(:disabled){transform:translateY(1px)}
+.primary:active:not(:disabled){background:var(--ink-press);border-color:var(--ink-press);box-shadow:none}
+.danger.fill{background:var(--ember);color:var(--on-ember)}
+.danger.fill:hover:not(:disabled){background:var(--ember-hi)}
+.primary:disabled,.ghost:disabled,.quiet:disabled,.danger:disabled{background:transparent;border-color:var(--rule);color:var(--mute);cursor:not-allowed;box-shadow:none;transform:none}
+.primary.sm,.ghost.sm,.quiet.sm,.danger.sm{height:32px;padding:0 var(--s3);font-size:13px}
+.primary.lg,.ghost.lg{height:48px;padding:0 var(--s5);font-size:16px}
+.status{font-size:13px;color:var(--mute)}
+.empty,.hint{color:var(--mute);font-size:14px;margin:0;text-wrap:pretty}
+.hint{padding:var(--s4) var(--s1);text-align:center}
+/* the printed structure (insert, tracklist, catalogue, export, your sounds): the insert stock with its grain,
+   cut square and framed by a printed hairline. It lies flat on the night: no shadow, no lit edge */
+/* the printed panels let a little of the night through (not glass: no blur); "Your sounds" stays opaque, as it can lie over the list */
+.panel,.cat,.insert,.tracks,.libp{background:var(--grain),var(--card-sheer);border:1px solid var(--rule);border-radius:var(--r-print)}
+.libp{background:var(--grain),var(--card)}
 
-.status{font-size:13px;color:var(--muted)}
-.empty,.hint{text-align:center;color:var(--muted);font-size:14px;padding:var(--s5) var(--s3);margin:0;text-wrap:balance}
-/* an empty list keeps its one action where the sentence is, not in the far corner */
-.empty-home{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s4);max-width:52ch}
-.empty-home p{margin:0;color:var(--text2);font-size:16px;line-height:1.6}
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-panel);padding:var(--s5)}
+/* the app's name: Alegreya italic, the same letter as the icon. Large on the title card, its alpha lit
+   like a lamp; in a top bar one mark, the same on the catalogue and on a composition: 28px in ink, only
+   the alpha in gold and no light around it. */
+.brand,.wordmark{margin:0;font-family:var(--serif);font-style:italic;font-weight:400;line-height:1;color:var(--ink)}
+.brand{font-size:28px;letter-spacing:.005em}
+.brand b,.wordmark b{font-weight:inherit;color:var(--gold)}
 
-/* the app's name, with its firefly */
-.brand,.wordmark{margin:0;font-family:var(--display);font-style:italic;font-weight:350;letter-spacing:-.02em;line-height:1;color:var(--text)}
-.brand{font-size:30px}
-.brand b,.wordmark b{font-weight:inherit;color:var(--glow-ink);margin-right:.015em;text-shadow:0 0 22px var(--glow-soft)}
+/* ---------- welcome: the title card ---------- */
+.screen-welcome{min-height:calc(100vh - 140px);display:flex;flex-direction:column}
+/* the title card sits in the middle of the night above the fine print, never closer than 48px to the top */
+.welcome{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding-block:var(--s7)}
+.wordmark{font-size:clamp(96px,11vw,168px);letter-spacing:-.01em;line-height:.9}
+.wordmark b{text-shadow:0 0 56px rgba(216,168,69,.38),0 0 14px rgba(216,168,69,.26)}
+/* the bar mark carries the same light, smaller: a faint bloom like a near star, never a halo */
+.brand b{text-shadow:0 0 18px rgba(216,168,69,.30),0 0 5px rgba(216,168,69,.22)}
+.tagline{margin-top:var(--s5);font:italic 400 32px/1.25 var(--serif);color:var(--ink)}
+.pen-word{position:relative;white-space:nowrap}
+.pen{position:absolute;left:-2%;right:-4%;bottom:-12px;width:106%;height:14px;overflow:visible}
+.pen path{fill:none;stroke:var(--gold);stroke-width:2;stroke-linecap:round;filter:drop-shadow(0 0 6px rgba(216,168,69,.55));
+  stroke-dasharray:220;stroke-dashoffset:0}
+/* the pen draws its line once, as the card arrives */
+.welcome .pen path{animation:pen-draw 1.2s .7s var(--ease) both}
+@keyframes pen-draw{from{stroke-dashoffset:220}}
+.welcome .lead{margin-top:var(--s6);max-width:52ch;color:var(--ink2);font-size:16px;line-height:1.6;text-wrap:balance}
+.welcome .lead b{color:var(--ink);font-weight:600}
+.welcome .actions{display:flex;gap:var(--s3);flex-wrap:wrap;justify-content:center;margin-top:var(--s6)}
+.wsteps{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--s2) var(--s6);margin:var(--s6) 0 0;padding:0;list-style:none;color:var(--ink2);font-size:16px}
+.wsteps li{display:flex;align-items:baseline;gap:var(--s2)}
+.wsteps .n{font:italic 400 19px/1 var(--serif);color:var(--mute)}
+.wnote{margin-top:var(--s5);max-width:56ch;color:var(--ink2);font-size:16px;line-height:1.55;text-wrap:balance}
+.wnote.warn{color:var(--ember-ink)}
+/* reading the folder: the button gives way to a pen line being drawn, and an honest label */
+.reading{display:flex;flex-direction:column;align-items:center;gap:var(--s3);margin-top:var(--s6);min-height:48px;opacity:0;transition:opacity .3s var(--ease)}
+.reading.show{opacity:1}
+.pline{display:block;width:240px;height:2px;border-radius:var(--r-print);background:var(--rule);overflow:hidden}
+.pline i{display:block;height:100%;width:40%;border-radius:var(--r-print);background:linear-gradient(90deg,rgba(216,168,69,0),var(--gold),var(--gold-hi));
+  animation:sweep 1.5s var(--ease) infinite}
+.plabel{font-size:14px;color:var(--ink2)}
+.unsupported{display:flex;flex-direction:column;align-items:center;gap:var(--s4);margin-top:var(--s6);max-width:52ch}
+.unsupported p:first-child{color:var(--ink);font-size:16px;line-height:1.6;text-wrap:balance}
+.welcome-foot{text-align:center;padding-top:var(--s7)}
+.fine{color:var(--mute);font-size:14px;line-height:1.55}
 
-/* ---------- welcome ---------- */
-.welcome{max-width:620px;margin:13vh 0 0 clamp(0px,6vw,96px)}
-.welcome .wordmark{font-size:clamp(88px,14vw,168px);font-weight:300;letter-spacing:-.03em;margin-left:-.03em;padding-bottom:.06em}
-.welcome .wordmark b{text-shadow:0 0 60px var(--glow-soft),0 0 18px var(--glow-soft)}
-.tagline{font-family:var(--display);font-style:italic;font-size:32px;font-weight:340;letter-spacing:-.008em;line-height:1.25;margin:var(--s3) 0 var(--s5)}
-.welcome .lead{color:var(--text2);font-size:16px;line-height:1.6;margin:0 0 var(--s6);max-width:60ch}
-.welcome .lead b{font-weight:600;color:var(--text)}
-.welcome .actions{display:flex;gap:var(--s3);flex-wrap:wrap}
-.note{color:var(--warn);font-size:14px;margin-top:var(--s5);max-width:54ch}
-.welcome .status{margin-top:var(--s5);font-size:14px;max-width:54ch;color:var(--text2)}
-.welcome .fine{color:var(--muted);font-size:13px;margin:var(--s4) 0 0;max-width:60ch}
+/* ---------- the night: soft lights, and distant stars at two depths ----------
+   The star fields are drawn once by the script into tiles. Each depth drifts slowly on its own
+   (the nearer, the further it travels) and shifts by a different amount with the pointer: the parallax.
+   They move on the welcome and the list, and stand still on a composition, where you work. */
+.sky{position:fixed;inset:0;z-index:-2;overflow:hidden;pointer-events:none;--px:0;--py:0;--sy:0;transition:opacity .8s var(--ease)}
+.sky .depth{position:absolute;inset:-8%;transition:transform 1.6s cubic-bezier(.16,.84,.3,1);will-change:transform}
+.sky .glow{transform:translate3d(calc(var(--px) * -6px),calc(var(--py) * -6px + var(--sy) * -.02px),0)}
+.sky .far{transform:translate3d(calc(var(--px) * -12px),calc(var(--py) * -12px + var(--sy) * -.05px),0)}
+.sky .near{transform:translate3d(calc(var(--px) * -30px),calc(var(--py) * -30px + var(--sy) * -.12px),0)}
+.stars{position:absolute;inset:-12%;background-repeat:repeat;will-change:transform}
+/* the sky's fields drift up and to the left and rise as the page scrolls: they reach further on those sides */
+.sky .stars,.imm-stars .stars{inset:-12% calc(-24% - 300px) calc(-30% - 160px) -12%}
+.sky .far .stars{background-image:var(--stars-far);background-size:var(--stars-far-size,900px 700px);opacity:.75;animation:drift-far 320s linear infinite alternate}
+.sky .near .stars{background-image:var(--stars-near);background-size:var(--stars-near-size,1300px 1000px);animation:drift-near 150s linear infinite alternate}
+/* on their own, the near stars travel about 5% of a wide window's width a minute (1.2px a second), the far
+   ones a quarter of that: slow enough to stay calm, quick enough to be seen moving */
+@keyframes drift-far{to{transform:translate3d(-154.8px,-77.4px,0)}}
+@keyframes drift-near{to{transform:translate3d(-291.6px,-140.4px,0)}}
+/* the far lights: large and out of focus, breathing very slowly */
+.sky .glow i{position:absolute;left:var(--x);top:var(--y);width:var(--s);height:var(--s);margin:calc(var(--s) / -2);border-radius:50%;
+  background:radial-gradient(closest-side,var(--c),transparent);opacity:.55;animation:breathe var(--d,90s) ease-in-out var(--w,0s) infinite alternate}
+@keyframes breathe{from{opacity:.32;scale:.92}to{opacity:.6;scale:1.06}}
+/* a few nearer stars that glimmer, each with a little bloom */
+.sky .near>i{position:absolute;left:var(--x);top:var(--y);width:3px;height:3px;margin:-1.5px;border-radius:50%;background:#f6ecd6;
+  box-shadow:0 0 6px 1px rgba(246,236,214,.5),0 0 18px 3px rgba(216,168,69,.16);animation:glimmer var(--d,9s) ease-in-out var(--w,0s) infinite}
+@keyframes glimmer{0%,100%{opacity:.2}50%{opacity:.95}}
+/* Now and then a comet: a star of the same light as the glimmering ones, gliding down across the night with
+   a thin tail that tapers to nothing. It brightens, travels a short way, slows a little and goes out; the
+   tail stretches out behind it as it starts. Near ones are brighter and quicker, far ones fainter, shorter and
+   slower, and each moves with its own depth's parallax. The script places one at a time (see core.js);
+   it is cut short, never frozen, when the screen stops moving. */
+.comet{position:absolute;width:var(--tail);height:2px;transform-origin:100% 50%;rotate:var(--a);opacity:0;pointer-events:none;
+  animation:comet-glide var(--d) cubic-bezier(.3,.1,.45,1) forwards,comet-light var(--d) linear forwards}
+.comet b{position:absolute;inset:0;transform-origin:100% 50%;clip-path:polygon(0 50%,100% 0,100% 100%);
+  background:linear-gradient(90deg,rgba(246,236,214,0),rgba(246,236,214,.10) 35%,rgba(246,236,214,.5) 82%,#f6ecd6);animation:comet-tail var(--d) cubic-bezier(.25,1,.5,1) forwards}
+.comet::after{content:"";position:absolute;right:-1.5px;top:50%;width:3px;height:3px;margin-top:-1.5px;border-radius:50%;background:#f6ecd6;
+  box-shadow:0 0 6px 1px rgba(246,236,214,.55),0 0 16px 3px rgba(216,168,69,.18)}
+.comet.far{height:1px}
+.comet.far::after{right:-1px;width:2px;height:2px;margin-top:-1px;box-shadow:0 0 4px 1px rgba(246,236,214,.4)}
+@keyframes comet-glide{to{transform:translateX(var(--len))}}
+@keyframes comet-light{0%{opacity:0}18%,62%{opacity:var(--o)}100%{opacity:0}}
+@keyframes comet-tail{0%{transform:scaleX(.08)}45%{transform:scaleX(1)}100%{transform:scaleX(.7)}}
+/* the list is a place to choose: the lights are a little fainter there */
+.sky[data-view="vHome"] .glow{opacity:.7}
+/* a composition is where you work: everything stands still and steps back */
+.sky[data-view="vEditor"]{opacity:.55}
+.sky[data-view="vEditor"] .stars,.sky[data-view="vEditor"] .glow i,.sky[data-view="vEditor"] .near>i{animation-play-state:paused}
+.sky[data-view="vEditor"] .comet{display:none}
 
-/* ---------- the sky: three depths of out-of-focus light ----------
-   Far lights are large and soft, near ones small and sharp. Each wanders on its own along a soft
-   curve: it sways sideways and up and down at two different paces, so the path does not visibly
-   repeat, and the nearer a light is the further it travels (--k) — as with the parallax. Each depth
-   shifts by a different amount with the pointer and with scrolling, which gives the page its parallax. */
-.sky{position:fixed;inset:0;z-index:-2;overflow:hidden;pointer-events:none;--px:0;--py:0;--sy:0}
-.sky .depth{position:absolute;inset:-6%;transition:transform 1.4s cubic-bezier(.16,.84,.3,1);will-change:transform}
-.sky .far{transform:translate3d(calc(var(--px) * -8px),calc(var(--py) * -8px + var(--sy) * -.03px),0)}
-.sky .mid{transform:translate3d(calc(var(--px) * -20px),calc(var(--py) * -20px + var(--sy) * -.09px),0)}
-.sky .near{transform:translate3d(calc(var(--px) * -42px),calc(var(--py) * -42px + var(--sy) * -.2px),0)}
-.sky i{position:absolute;left:var(--x);top:var(--y);width:var(--s);height:var(--s);margin:calc(var(--s) / -2);border-radius:50%;background:var(--c,var(--glow));
-  mix-blend-mode:var(--sky-blend);--t:calc(var(--d,40s) * .42);
-  animation:drift-x var(--t) ease-in-out var(--w,0s) infinite alternate,drift-y calc(var(--t) * .73) ease-in-out var(--w,0s) infinite alternate}
-.sky .far i{--k:1.4}
-.sky .mid i{--k:2.4}
-.sky .near i{--k:2}
-.sky .far i{background:radial-gradient(closest-side,var(--c,var(--glow)) 0%,color-mix(in srgb,var(--c,var(--glow)) 45%,transparent) 45%,transparent 100%);opacity:var(--sky-far)}
-/* no solid core: a light out of focus, not a coloured sticker */
-.sky .mid i{background:radial-gradient(closest-side,var(--c,var(--glow)) 0%,color-mix(in srgb,var(--c,var(--glow)) 55%,transparent) 38%,transparent 100%);opacity:var(--sky-mid);
-  animation-name:drift-x,drift-y,glimmer;animation-duration:var(--t),calc(var(--t) * .73),calc(var(--t) * .61)}
-.sky .near i{opacity:var(--sky-near);box-shadow:0 0 calc(var(--s) * 2.2) calc(var(--s) * .5) var(--glow-soft);animation-name:drift-x,drift-y,twinkle;animation-duration:var(--t),calc(var(--t) * .73),calc(var(--d,40s) / 5);mix-blend-mode:normal}
-@keyframes drift-x{from{translate:calc(var(--dx,24px) * var(--k,1) * -.5) 0}to{translate:calc(var(--dx,24px) * var(--k,1) * .5) 0}}
-@keyframes drift-y{from{transform:translateY(calc(var(--dy,-36px) * var(--k,1) * -.5))}to{transform:translateY(calc(var(--dy,-36px) * var(--k,1) * .5))}}
-@keyframes glimmer{from{opacity:calc(var(--sky-mid) * .55)}to{opacity:var(--sky-mid)}}
-@keyframes twinkle{0%,100%{opacity:calc(var(--sky-near) * .25)}50%{opacity:var(--sky-near)}}
-/* the top strip holds text: no light is allowed to drift behind it */
-.sky::before{content:"";position:absolute;z-index:1;inset:0 0 auto;height:112px;background:linear-gradient(var(--bg) 42%,transparent)}
-/* the editor is a workplace: only the faintest far lights stay, and the cover provides the atmosphere */
-.sky[data-view="vEditor"] .mid,.sky[data-view="vEditor"] .near{display:none}
-.sky[data-view="vEditor"] .far{opacity:.45}
-.sky[data-view="vHome"] .near{opacity:.6}
+/* ---------- your compositions: the catalogue ---------- */
+.bar{display:flex;align-items:center;gap:var(--s4);height:56px;margin-bottom:var(--s5)}
+/* the catalogue's bar takes the catalogue's measure: the name sits over the heading's first letter, and
+   "Change folder" ends where the list ends; the fine print below follows the same column */
+.screen-home .bar{max-width:1200px;margin-inline:auto}
+body:has(#vHome:not([hidden])) .foot{max-width:calc(1200px + 2 * var(--s7))}
+.folder{margin-left:auto;display:inline-flex;align-items:center;gap:var(--s2);color:var(--mute);font-size:13px}
+.folder b{color:var(--ink2);font-weight:500}
+.col{max-width:1200px;margin:0 auto}
+.home-head{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--s4);flex-wrap:wrap;margin-bottom:var(--s5)}
+.h1{font:400 44px/1.1 var(--serif);letter-spacing:-.01em;text-wrap:balance}
+.tools{display:flex;align-items:center;justify-content:space-between;gap:var(--s4);flex-wrap:wrap;margin-bottom:var(--s4)}
+.find{position:relative;display:block;flex:0 1 340px;min-width:0}
+/* the glass sits 12px inside the field's 1px edge, and the words start 8px after it */
+.find svg{position:absolute;left:calc(1px + var(--s3));top:50%;translate:0 -50%;color:var(--mute);pointer-events:none}
+.find .search{padding-left:calc(var(--s3) + 16px + var(--s2))}
 
-/* ---------- list of compositions ---------- */
-.bar{display:flex;align-items:center;justify-content:space-between;gap:var(--s4);flex-wrap:wrap;margin-bottom:var(--s7)}
-.folder{display:inline-flex;align-items:center;gap:var(--s2);color:var(--muted);font-size:13px}
-.folder svg{width:16px;height:16px}
-.home-head{display:flex;align-items:center;justify-content:space-between;gap:var(--s4);flex-wrap:wrap;margin-bottom:var(--s6)}
-.h1{font-size:52px;line-height:1.3;font-weight:300;letter-spacing:-.015em}
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:var(--s6) var(--s5)}
-.card{position:relative;border-radius:var(--r-row)}
-.card .open{display:block;width:100%;border:0;background:transparent;padding:0;text-align:left;border-radius:var(--r-row)}
-.frame{position:relative;display:block}
-/* each cover gives off its own soft light */
-.halo{position:absolute;inset:6% 4% -4%;z-index:-1;border-radius:var(--r-row);background-size:cover;background-position:center;
-  background-image:var(--img,var(--cover-grad));filter:blur(22px) saturate(1.3);opacity:.42;transition:opacity .4s,transform .4s}
-.card:hover .halo{opacity:.75;transform:translateY(6px) scale(1.04)}
-.art{aspect-ratio:1;border-radius:var(--r-row);overflow:hidden;display:grid;place-items:center;position:relative;
-  background:var(--cover-grad);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--text) 14%,transparent);
-  transition:transform .35s cubic-bezier(.2,.8,.2,1)}
-.art img{width:100%;height:100%;object-fit:cover;display:block}
-.art span{font-family:var(--display);font-style:italic;font-size:84px;font-weight:300;color:#edeff8;line-height:1}
-.card:hover .art{transform:translateY(-4px)}
-/* A composition with no picture of its own takes one of four inks, by its name.
-   They are dark enough for a moon-white initial and belong to the palette. */
-.art,.halo{--cover-grad:linear-gradient(150deg,#3d4f8a,#243a55)}
-[data-c="1"] .art,[data-c="1"] .halo{--cover-grad:linear-gradient(150deg,#5a4a7a,#3a2f5c)}
-[data-c="2"] .art,[data-c="2"] .halo{--cover-grad:linear-gradient(150deg,#6a4560,#4a3350)}
-[data-c="3"] .art,[data-c="3"] .halo{--cover-grad:linear-gradient(150deg,#2f5a6b,#243a55)}
-.meta{display:flex;align-items:flex-start;gap:var(--s2);padding-top:var(--s4)}
-.title-open{flex:1;min-width:0;border:0;background:transparent;padding:0;text-align:left;color:inherit;border-radius:var(--r-ctl)}
-.title-open:hover strong{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:4px}
-.meta strong{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
-  font-family:var(--display);font-style:italic;font-size:22px;font-weight:400;letter-spacing:-.005em;line-height:1.28;min-height:2.56em}
-.meta .untitled{color:var(--text2)}
-.meta small{display:block;color:var(--muted);font-size:13px;margin-top:var(--s1)}
-.meta .warn-line{color:var(--warn)}
-/* the "more" button sits beside the title, never on the picture, and is visible at rest */
-.card .more{flex:none;width:32px;height:32px;margin-top:var(--s1);border-radius:var(--r-ctl);
-  border:1px solid var(--ctl);background:var(--surface);color:var(--text);display:grid;place-items:center;transition:background .12s,border-color .12s}
-.card .more svg{width:16px;height:16px}
-.card .more:hover{background:var(--raise);border-color:var(--ctl)}
-.card.renaming .more{display:none}
-.rename-in{width:100%;font-family:var(--display);font-style:italic;font-size:22px;font-weight:400;line-height:1.28;
-  border:1px solid var(--ctl);background:var(--raise);color:var(--text);border-radius:var(--r-ctl);padding:2px var(--s2);outline:none}
-.rename-hint{font-size:12px;color:var(--muted);margin-top:var(--s1)}
-
-/* ---------- menu ---------- */
-.menu{position:fixed;z-index:65;min-width:216px;background:var(--surface);border:1px solid var(--ctl);border-radius:var(--r-sm);
-  padding:var(--s1);box-shadow:0 14px 30px -14px var(--shadow);animation:pop-menu .16s ease-out}
-@keyframes pop-menu{from{opacity:0;transform:translateY(8px)}}
-.menu button{display:flex;align-items:center;gap:var(--s3);width:100%;height:36px;padding:0 var(--s3);border:0;background:transparent;
-  border-radius:var(--r-ctl);color:var(--text);font-size:14px;font-weight:500;text-align:left}
-.menu button:hover{background:var(--raise)}
-.menu button svg{width:16px;height:16px;color:var(--text2)}
-.menu .danger-item{color:var(--warn)}
-.menu .danger-item svg{color:var(--warn)}
-.menu hr{border:0;border-top:1px solid var(--line);margin:var(--s1) var(--s2)}
-.menu .key{margin-left:auto;font-size:12px;color:var(--muted)}
-
-/* ---------- the archive, folded under the list ---------- */
-.arch{margin-top:var(--s6);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-row);overflow:hidden}
-.arch-head{display:flex;align-items:center;gap:var(--s3);width:100%;height:56px;padding:0 var(--s4);border:0;background:transparent;color:var(--text);font-size:14px;font-weight:600;cursor:pointer;list-style:none}
-.arch-head::-webkit-details-marker{display:none}
-.arch-head:hover{background:var(--raise)}
-.arch-head svg{width:16px;height:16px;color:var(--text2)}
-.arch-head .count{color:var(--muted);font-weight:400}
-.arch-head .chev{margin-left:auto;transition:transform .2s}
-.arch[open] .chev{transform:rotate(180deg)}
-.arch-list{padding:0 var(--s4) var(--s2)}
-.arch-item{display:flex;align-items:center;gap:var(--s3);padding:var(--s3) 0;border-top:1px solid var(--line)}
-.arch-item .thumb{width:48px;height:48px;flex:none;border-radius:var(--r-ctl);overflow:hidden;background:var(--cover-grad);display:grid;place-items:center;opacity:.55}
-.arch-item .thumb img{width:100%;height:100%;object-fit:cover}
-.arch-item .thumb span{font-family:var(--display);font-style:italic;font-size:22px;color:#edeff8}
-.arch-item .an{flex:1;min-width:0}
-.arch-item .an strong{display:block;font-family:var(--display);font-style:italic;font-size:20px;font-weight:400;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.arch-item .an small{color:var(--muted);font-size:12px}
-
-/* ---------- editor ---------- */
-/* The atmosphere: behind the whole editor, fixed to the window, the cover blurred just enough that
-   its main areas of colour stay recognisable. A dark veil over it keeps the text that sits on the
-   background readable even on a very pale cover, and keeps the working screen calmer than immersion.
-   There is no band and no mask, so no edge anywhere. Without a cover it is not drawn at all, and the
-   palette's horizon shows as before. */
-.atmo{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
-.atmo:not(.has){display:none}
-/* the picture is blurred once, small, and only scaled up here: no filter runs while scrolling or playing */
-.atmo-pic{position:absolute;inset:-8%;background:center/cover no-repeat;opacity:0;transition:opacity .4s ease;
-  transform:translate3d(0,calc(max(var(--sy,0) * -.04px,-48px)),0);will-change:transform}
-.atmo-pic.on{opacity:1}
-.atmo-pic.css-blur{filter:blur(28px) saturate(1.2)}   /* browsers that cannot blur on a canvas */
-/* the veil is set from the cover itself: stronger on a pale one, lighter on a dark one, which keeps more of its colour */
-.atmo::after{content:"";position:absolute;inset:0;background:color-mix(in srgb,var(--bg) var(--veil,80%),transparent)}
-
-.ed-top{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);margin-bottom:var(--s5);min-height:40px}
-/* on a tint, secondary text uses the main colour: the way back must be easy to read */
-.back{display:inline-flex;align-items:center;gap:var(--s2);height:40px;border:1px solid transparent;background:transparent;color:var(--text);
-  padding:0 var(--s3) 0 var(--s2);margin-left:-8px;border-radius:var(--r-ctl);font-size:14px;font-weight:500;transition:background .12s}
-.back:hover{background:color-mix(in srgb,var(--surface) 70%,transparent)}
-.back svg{width:16px;height:16px}
-.ed-head{display:flex;gap:var(--s5);align-items:center;margin-bottom:var(--s6)}
-.cover-wrap{position:relative;flex:none;width:132px;height:132px}
-.cover{width:100%;height:100%;border-radius:var(--r-row);border:1.5px dashed var(--ctl);background:color-mix(in srgb,var(--surface) 55%,transparent);
-  padding:0;overflow:hidden;color:var(--text2);font-size:13px;line-height:1.35;transition:border-color .12s,color .12s}
-.cover:hover{border-color:var(--text);color:var(--text)}
-.cover img{width:100%;height:100%;object-fit:cover;display:block}
-.cover.has{border:0;box-shadow:0 24px 40px -20px var(--shadow)}
-/* once there is a picture you can change it or take it away again */
-.cover-acts{position:absolute;left:var(--s2);right:var(--s2);bottom:var(--s2);display:flex;gap:var(--s2);opacity:0;transition:opacity .15s}
-.cover-wrap:hover .cover-acts,.cover-acts:focus-within{opacity:1}
-.cover-acts button{flex:1;height:32px;border-radius:var(--r-ctl);border:1px solid color-mix(in srgb,var(--text) 22%,transparent);
-  background:color-mix(in srgb,var(--surface) 78%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
-  color:var(--text);font-size:12px;font-weight:600}
-.cover-acts button:hover{background:var(--surface)}
-/* The title is a title first and a field second: it shows its shape on hover and on focus, and the
-   pointer becomes a text cursor over it. A long one shrinks rather than being cut off in the middle of a word. */
-.title{display:block;width:100%;min-width:0;border:1px solid transparent;background:transparent;font-family:var(--display);font-style:italic;font-size:52px;font-weight:300;letter-spacing:-.015em;line-height:1.3;
-  padding:0 var(--s2);margin-left:-9px;border-radius:var(--r-ctl);text-overflow:ellipsis;
-  transition:background .12s,border-color .12s,font-size .15s}
-.title.t-long{font-size:38px;line-height:1.32}
-.title.t-xlong{font-size:30px;line-height:1.34}
-.title.t-xxlong{font-size:24px;line-height:1.36}
-.title:hover{border-color:var(--ctl)}
-.title:focus{border-color:var(--text);background:var(--raise)}
-.title::placeholder{color:var(--muted);opacity:.8}
-/* The optional description under the title, edited in place like it. It always has its place:
-   without one, a sample sentence in a very faint tone says what the space is for; a description
-   someone wrote reads clearly, on up to two lines. */
-.desc{margin:var(--s1) 0 0 -9px;padding:var(--s1) var(--s2);border:1px solid transparent;border-radius:var(--r-ctl);
-  font:400 14px/20px var(--ui);color:var(--text);overflow-wrap:anywhere;cursor:text;outline:none;
-  transition:background .12s,border-color .12s}
-.desc:not(:focus){display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.desc:empty::before{content:attr(data-ph);color:var(--muted);opacity:.55}
-.desc:hover{border-color:var(--ctl)}
-.desc:focus{border-color:var(--text);background:var(--raise)}
-.desc:focus-visible{outline:none}
-
-/* The bar stays pinned while you scroll, and carries the one thing you must always be able to
-   check — whether your work is saved. When pinned it sits on a solid strip, so nothing
-   scrolls through it. */
-.transport{position:sticky;top:12px;z-index:5;display:flex;align-items:center;gap:var(--s4);flex-wrap:wrap;
-  background:color-mix(in srgb,var(--surface) 86%,transparent);-webkit-backdrop-filter:blur(18px) saturate(1.3);backdrop-filter:blur(18px) saturate(1.3);
-  border:1px solid var(--line);border-radius:var(--r-panel);padding:var(--s2);margin-bottom:var(--s6);box-shadow:0 14px 30px -24px var(--shadow)}
-/* as wide as the window less its scrollbar (100vw alone includes it, and then the page scrolls sideways) */
-.transport::before{content:"";position:absolute;z-index:-1;left:50%;transform:translateX(-50%);width:calc(100vw - var(--sbw,0px));top:-20px;bottom:-12px;
-  background:var(--bg);opacity:0;transition:opacity .2s;pointer-events:none;
-  -webkit-mask-image:linear-gradient(#000 calc(100% - 16px),transparent);mask-image:linear-gradient(#000 calc(100% - 16px),transparent)}
-/* fully opaque: at 92 % the tops of the rows showed through the band above the bar */
-.transport.stuck::before{opacity:1}
-.transport.stuck{background:var(--surface);border-color:color-mix(in srgb,var(--ctl) 50%,transparent);box-shadow:0 14px 30px -14px var(--shadow)}
-.play{width:48px;height:48px;border-radius:50%;border:0;background:var(--text);color:var(--bg);display:grid;place-items:center;flex:none;
-  transition:transform .06s,background .3s,color .3s,box-shadow .3s}
-.play:hover{background:var(--hover-fill)}
-.play:active{transform:scale(.97)}
-.play svg{width:20px;height:20px}
-.play.playing{background:var(--glow);color:var(--on-glow);border:1.5px solid var(--glow-rim);animation:lantern 2.6s ease-in-out infinite}
-@keyframes lantern{0%,100%{box-shadow:0 0 0 0 var(--glow-soft),0 0 12px 0 var(--glow-soft)}50%{box-shadow:0 0 0 7px var(--glow-soft),0 0 26px 2px var(--glow-soft)}}
-.clock{font-variant-numeric:tabular-nums;font-size:18px;font-weight:500;min-width:58px}
-.master{display:flex;align-items:center;gap:var(--s3);flex:1;min-width:160px}
-.master span{font-size:13px;color:var(--text2);white-space:nowrap}
-.master .val{min-width:40px;text-align:right;color:var(--text)}
-.tbar-end{display:flex;align-items:center;gap:var(--s2);flex:none;margin-left:auto}
-.imm-open{display:inline-flex;align-items:center;gap:var(--s2);flex:none;height:40px;border-radius:999px;border:1px solid var(--ctl);background:var(--surface);color:var(--text);
-  padding:0 var(--s4);font-size:14px;font-weight:600;transition:background .12s,border-color .12s}
-.imm-open:hover{border-color:var(--text);background:var(--raise)}
-.imm-open:active{background:var(--line);transform:translateY(1px)}
-.imm-open svg{width:16px;height:16px}
-
-/* ---------- is my work safe? ----------
-   A plate with its own background, so it reads the same over any cover, and a sign in front of
-   the words, so the state never depends on reading or on colour alone. */
-.save-plate{display:inline-flex;align-items:center;gap:var(--s2);height:40px;padding:0 var(--s4);border-radius:999px;flex:none;
-  background:color-mix(in srgb,var(--surface) 88%,transparent);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
-  border:1px solid var(--ctl);color:var(--text);font-size:13px;font-weight:500;white-space:nowrap;transition:border-color .3s}
-.save-plate .when{color:var(--muted);font-weight:400}
-.save-plate .ring{width:12px;height:12px;border-radius:50%;border:2px solid var(--text);flex:none}
-.save-plate .tick{width:20px;height:20px;border-radius:50%;background:var(--text);color:var(--bg);display:grid;place-items:center;flex:none}
-.save-plate .tick svg{width:12px;height:12px}
-.save-plate .alert{width:18px;height:18px;flex:none;color:var(--warn)}
-.save-plate.saving .ring{border-right-color:transparent;animation:spin .9s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.save-plate.err{border-color:var(--warn);color:var(--warn)}
-.save-plate.err .when{color:var(--warn)}
-.save-plate.flash{border-color:var(--text)}
-
-/* while one sound is soloed, every other row is silent: say so where it can always be seen */
-.solo-note{display:flex;align-items:center;gap:var(--s2);width:100%;margin:0 var(--s2);padding-top:var(--s2);
-  border-top:1px solid var(--line);font-size:13px;color:var(--text2)}
-.solo-note b{font-weight:600}
-.solo-note b{color:var(--text)}
-.solo-note.sounding b{color:var(--glow-ink)}
-
-.ed-grid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:var(--s6);align-items:start}
-.list{display:flex;flex-direction:column;gap:var(--s3)}
-/* above the sounds: the heading on a line of its own, then a toolbar on the edges of the list —
-   the field to find a sound on the left, the view on the right. The toolbar keeps its height
-   whether the field is shown or not. */
-.list-head{height:40px;line-height:40px;margin:0 0 var(--s2)}
-/* how many sounds, and how many have lost their file, beside the heading */
-.list-meta{font:500 14px var(--ui);letter-spacing:0;color:var(--text2)}
-.list-meta .sep{margin:0 var(--s2)}
-.list-meta .warn-line{color:var(--warn)}
-.list-head,.export h2{font-size:26px;font-weight:380}
-.export h2{line-height:1.25}
-.viewbar{display:flex;align-items:center;gap:var(--s2);margin:0 0 var(--s4);min-height:40px;flex-wrap:wrap}
-.viewbar .seg{margin-left:auto}
-.viewbar .seg button{display:inline-flex;align-items:center;gap:var(--s2)}
-.viewbar .seg svg{width:16px;height:16px}
-.viewbar .find{flex:0 1 240px;min-width:0}
-.to-lib{display:none}
-@media (max-width:900px){ .to-lib{display:inline-flex;margin-left:auto} .to-lib~.seg{margin-left:0} }
-@media (min-width:901px){
-  /* both columns start on the same line: the heading, the gap below it, the toolbar and the gap below that */
-  .lib{margin-top:calc(40px + var(--s2) + 40px + var(--s4))}
-}
-
-/* ---------- one sound ---------- */
-.track{position:relative;overflow:hidden;background:color-mix(in srgb,var(--surface) 92%,transparent);border:1px solid var(--line);border-radius:var(--r-row);padding:var(--s4);transition:border-color .3s}
-.tbg{position:absolute;inset:0;z-index:0;background-size:cover;background-position:center;opacity:0;transition:opacity .7s ease;pointer-events:none}
-.tbg.show{opacity:.34}
-/* a composition opening: each row rises a few pixels and fades in, 40 ms after the one above */
-.track.enter{animation:row-in .24s cubic-bezier(.2,.7,.3,1) calc(var(--i,0) * 40ms) both}
-@keyframes row-in{from{opacity:0;transform:translateY(8px)}}
-/* a picture never passes under text: it is held clear of the left half and fades in towards the right */
-.tbg::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,var(--surface) 45%,color-mix(in srgb,var(--surface) 62%,transparent) 76%,color-mix(in srgb,var(--surface) 30%,transparent))}
-/* in a narrow window there is no room to hold the picture clear of the controls: fade it right back */
-@media (max-width:900px){ .tbg.show{opacity:.16} }
-.track>.top,.track>.grid,.track>.mode,.track>.fxp,.track>.warn{position:relative;z-index:1}
-.prog{position:absolute;z-index:2;left:0;right:0;bottom:0;height:3px;background:transparent}
-.prog i{display:block;height:100%;background:var(--glow);transform-origin:left center;transform:scaleX(0)}
-/* A silenced sound is not faded into illegibility — it is recoloured, and says why it is silent. */
-.track.off .name{color:var(--muted)}
-.track.off .field label,.track.off .lab,.track.off .opts,.track.off .check{color:var(--text3)}
-/* on the switch's own fill, text3 would drop below 4.5:1 — the dim colour stays readable there */
-.track.off .seg button:not(.on){color:var(--muted)}
-.track.off .val{color:var(--muted)}
-.track.off input[type=range]{--fill:var(--muted)}
-.track.off .tbg{opacity:0}
-.why-off{font-size:12px;color:var(--text3);white-space:nowrap}
-.track.hit{border-color:var(--glow-rim)}
-.track.imgdrop{border-color:var(--glow-rim);box-shadow:0 0 0 3px var(--glow-soft)}
-.track.missing{border-color:color-mix(in srgb,var(--warn) 60%,transparent)}
-
-/* In a row, the name gets a line to itself and the controls sit beneath it, right-aligned.
-   Squeezing both onto one line left no room for the name, which is how you tell sounds apart. */
-.top{display:flex;align-items:center;gap:var(--s2);margin-bottom:var(--s3);flex-wrap:wrap}
-.list:not(.tiles) .top>.grip{order:1}
-.list:not(.tiles) .top>.dot{order:2}
-.list:not(.tiles) .top>.name{order:3}
-.list:not(.tiles) .top>.imgctl{order:4;margin-left:auto}
-.list:not(.tiles) .top>.dur,.list:not(.tiles) .top>.tdur{order:5}
-.list:not(.tiles) .top>.why-off{order:6}
-.list:not(.tiles) .top>.btns{order:7;width:100%;justify-content:flex-end;margin-top:var(--s1)}
-.grip{flex:none;width:24px;height:32px;display:grid;place-items:center;cursor:grab;color:var(--text2);touch-action:none;border-radius:var(--r-ctl);border:1px solid transparent;background:transparent}
-.grip:hover,.grip:focus-visible{background:var(--raise)}
-.grip svg{width:10px;height:16px}
-.dot{width:10px;height:10px;border-radius:50%;background:transparent;border:1.5px solid var(--ctl);flex:none;transition:background .25s,box-shadow .25s,border-color .25s}
-.track.live .dot{background:var(--glow);border-color:var(--glow-rim);animation:breathe 3.2s ease-in-out infinite}
-.track.hit .dot{background:var(--glow);border-color:var(--glow-rim);box-shadow:0 0 0 5px var(--glow-soft),0 0 12px 1px var(--glow)}
-.dot.miss{border-color:var(--warn);color:var(--warn);width:16px;height:16px;border:0;display:grid;place-items:center}
-.dot.miss svg{width:16px;height:16px}
-@keyframes breathe{0%,100%{box-shadow:0 0 0 2px var(--glow-soft)}50%{box-shadow:0 0 0 5px var(--glow-soft),0 0 12px 1px var(--glow)}}
-/* registered so the bloom can fade in: an unregistered custom property cannot be animated */
-@property --bloom-a{syntax:"<number>";inherits:false;initial-value:0}
-.name{font:inherit;font-size:16px;font-weight:600;color:var(--text);flex:0 1 auto;max-width:360px;min-width:60px;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  border:0;border-radius:0;height:32px;padding:0;
-  /* no box around the name: a line grows beneath it from the first letter, so the text keeps
-     the same 8 px from the dot as every other item in the row */
-  /* the line carries a faint warm bloom, the same light as a sounding dot: even along the line,
-     fading out above and below it and, through a half-ellipse at each end, towards the sides.
-     The line grows; the bloom fades in. */
-  --line-c:var(--ctl);--bc:color-mix(in srgb,var(--bloom-c) calc(var(--bloom-a) * 100%),transparent);
-  background-image:linear-gradient(var(--line-c),var(--line-c)),
-    radial-gradient(farthest-side at 100% 50%,var(--bc),transparent),
-    linear-gradient(transparent,var(--bc),transparent),
-    radial-gradient(farthest-side at 0 50%,var(--bc),transparent);
-  background-color:transparent;background-repeat:no-repeat;
-  background-position:0 calc(100% - 3px),0 100%,20px 100%,100% 100%;
-  background-size:0 1px,20px 7px,calc(100% - 40px) 7px,20px 7px;
-  transition:background-size .2s ease-out,--bloom-a .4s ease-out}
-.name:hover{--bloom-a:1;background-size:100% 1px,20px 7px,calc(100% - 40px) 7px,20px 7px}
-.name:focus,.name:focus-visible{outline:none;--line-c:var(--text);--bloom-a:1;background-size:100% 2px,20px 7px,calc(100% - 40px) 7px,20px 7px}
-.dur{font-size:13px;color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap;width:84px;text-align:right;flex:none}
-/* the picture buttons are quiet but always there, so a sound's picture can be discovered */
-.imgctl{display:flex;gap:var(--s2);transition:opacity .15s}
-.track:hover .imgctl,.imgctl:focus-within{opacity:1}
-.imgctl .icon{border-color:transparent;background:color-mix(in srgb,var(--surface) 76%,transparent);color:var(--text2)}
-.track:hover .imgctl .icon,.imgctl .icon:focus-visible{color:var(--text);border-color:var(--ctl)}
-
-.btns{display:flex;gap:var(--s2);align-items:center}
-.chip,.icon{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;
-  border:1px solid var(--ctl);background:var(--surface);border-radius:var(--r-ctl);
-  height:32px;min-width:32px;padding:0 var(--s3);font-size:13px;font-weight:600;color:var(--text2);flex:none;
-  transition:color .12s,border-color .12s,background .12s,transform .06s}
-.icon{padding:0;color:var(--text2)}
-.icon svg{width:16px;height:16px}
-.chip:hover:not(:disabled),.icon:hover:not(:disabled){color:var(--text);border-color:var(--text);background:var(--raise)}
-.chip:active:not(:disabled),.icon:active:not(:disabled){background:var(--line);transform:translateY(1px)}
-.chip:disabled,.icon:disabled{background:var(--raise);border-color:transparent;color:var(--text3);cursor:not-allowed}
-/* words where there is room; the familiar letters when the window is narrow */
-/* The words stay at every width. Three cryptic letters beside one spelled-out word read as an
-   accident; the controls sit on their own line, where there is room for all of them. */
-.icon.keep.is-saved{color:var(--text)}
-/* one "on" look for every switch you leave on */
-.chip.on,.icon.on{background:var(--line);border-color:var(--text);color:var(--text)}
-.chip.on:hover:not(:disabled),.icon.on:hover:not(:disabled){background:var(--raise);color:var(--text);border-color:var(--text)}
-/* "the panel is open" is not the same thing as "this sound has filters": the count says how many */
-.chip.fxb.open{border-color:var(--text);color:var(--text);background:var(--raise)}
-.chip.fxb .n{display:inline-grid;place-items:center;min-width:18px;height:18px;margin-left:6px;border-radius:999px;background:var(--text);color:var(--bg);font-size:11px;padding:0 5px}
-.chip.fxb.open .n{background:var(--text)}
-/* whatever is sounding is amber: previews, and solo while it plays */
-.chip.solo.sounding,.icon.test.on,.icon.pv.on{background:var(--glow);border-color:var(--glow-rim);color:var(--on-glow)}
-.chip.solo.sounding:hover,.icon.test.on:hover,.icon.pv.on:hover{background:var(--glow);color:var(--on-glow);border-color:var(--glow-rim)}
-.icon.test,.icon.pv{border-radius:50%}
-.icon.test svg,.icon.pv svg{width:14px;height:14px}
-.icon.keep,.icon.del{border-color:transparent;background:transparent}
-.icon.del{margin-left:var(--s2)}
-.icon.del:hover,.icon.rm:hover{color:var(--warn)!important;border-color:var(--warn)!important;background:color-mix(in srgb,var(--warn) 12%,transparent)!important}
-a.icon{text-decoration:none}
-.warn{color:var(--warn);font-size:13px;margin:0 0 var(--s3);display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap}
-.warn .quiet,.warn .ghost{color:var(--text)}
-
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--s3) var(--s5);margin-bottom:var(--s3)}
-.field label,.field .lab{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--text2);margin-bottom:2px;min-height:22px}
-.val{color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap}
-
-.mode{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s3) var(--s4);padding-top:var(--s3);border-top:1px solid var(--line)}
-/* The segmented control: one row of choices, one of them selected. Every switch of this kind uses
-   it, with the same states everywhere. A 40 px track holding 32 px choices. Three words in a row
-   need more air than a one-word chip does, so these get 16 px either side rather than the chip's 12. */
-.seg{--slide:.2s cubic-bezier(.22,.8,.3,1);position:relative;display:inline-flex;background:var(--raise);border:1px solid var(--ctl);border-radius:var(--r-sm);padding:3px;height:40px}
-.seg button{position:relative;z-index:1;border:0;background:transparent;border-radius:var(--r-ctl);padding:0 var(--s4);font-size:13px;font-weight:600;color:var(--text2);transition:color var(--slide),background .12s}
-.seg button:hover:not(.on){color:var(--text);background:color-mix(in srgb,var(--surface) 70%,transparent)}
-.seg button:active:not(.on){background:var(--line)}
-.seg button.on{color:var(--text)}
-/* the selection is one pill behind the choices, which slides to the chosen one (placed by the script) */
-.seg-pill{position:absolute;top:3px;bottom:3px;left:0;width:0;border-radius:var(--r-ctl);background:var(--surface);box-shadow:0 1px 2px var(--shadow);
+/* segmented control: one row of choices on a recessed plate, the chosen one on a raised pill that slides */
+.seg{--slide:.24s var(--ease);position:relative;display:inline-flex;background:var(--field);border:1px solid var(--rule);border-radius:var(--r-sm);padding:var(--s1);height:40px}
+.seg button{position:relative;z-index:1;border:0;background:transparent;border-radius:var(--r-ctl);padding:0 var(--s4);font-size:13px;font-weight:500;color:var(--mute);
+  transition:color var(--slide),background var(--t-state)}
+.seg button:hover:not(.on){color:var(--ink)}
+.seg button.on{color:var(--ink)}
+.seg button .n{margin-left:var(--s2);color:var(--mute);font-variant-numeric:tabular-nums}
+.seg-pill{position:absolute;top:var(--s1);bottom:var(--s1);left:0;width:0;border-radius:var(--r-ctl);background:var(--rule);box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 1px 2px var(--shadow);
   pointer-events:none;transition:transform var(--slide),width var(--slide)}
-/* the same control across the full width, in equal shares */
 .seg.fill{display:flex}
 .seg.fill button{flex:1}
-.opts{display:flex;align-items:center;gap:var(--s2);font-size:13px;color:var(--text2);flex-wrap:wrap;min-height:32px}
-.opts input[type=range]{width:120px}
-.check{display:flex;align-items:center;gap:var(--s2);cursor:pointer;white-space:nowrap;height:32px}
-/* our own tick box: the browser's grey one belongs to no palette */
-input[type=checkbox]{appearance:none;-webkit-appearance:none;width:16px;height:16px;margin:0;flex:none;border:1.5px solid var(--ctl);
-  border-radius:4px;background:var(--surface);display:grid;place-items:center;cursor:pointer;transition:background .12s,border-color .12s}
-input[type=checkbox]:hover{border-color:var(--text)}
-input[type=checkbox]:checked{background:var(--text);border-color:var(--text)}
-input[type=checkbox]:checked::after{content:"";width:9px;height:5px;border:2px solid var(--bg);border-top:0;border-right:0;transform:rotate(-45deg) translate(1px,-1px)}
-input[type=checkbox]:disabled{border-color:var(--line);background:var(--raise);cursor:not-allowed}
 
-.fxp{margin-top:var(--s3);padding-top:var(--s3);border-top:1px solid var(--line)}
-.fxp .grid{margin-bottom:0;row-gap:var(--s4)}
-.fxp .lab{justify-content:flex-start;gap:var(--s2);color:var(--text);font-weight:600;margin-bottom:0}
-.fxp .lab .val{margin-left:auto;font-weight:400;color:var(--text2)}
-.fxp .field.wide{grid-column:1/-1}
-/* every effect says in one line what it does, so you never have to know the word */
-/* two lines are reserved so the sliders in the two columns stay on the same line as each other */
-.fx-hint{margin:0 0 var(--s1);font-size:12px;line-height:1.4;color:var(--text3);min-height:34px}
-/* ready-made places, so you can choose a sound's world without touching a single slider */
-.fx-places{margin-bottom:var(--s4)}
-.fx-places p{margin:0 0 var(--s2);font-size:13px;color:var(--text2)}
-.fx-places .chips{display:flex;flex-wrap:wrap;gap:var(--s2)}
-.fx-places .place{padding:0 var(--s3)}
-/* "No effects" is a reset, not a place: a thin rule sets it apart, with the row's own gap on each side */
-.fx-places .chips-sep{width:1px;height:var(--s5);align-self:center;background:color-mix(in srgb,var(--ctl) 60%,transparent)}
-.fxcheck{display:inline-flex;align-items:center;gap:var(--s2);height:32px;font-size:12px;cursor:pointer}
-select.revtype{font-size:12px;height:32px;padding:0 24px 0 var(--s2);border-radius:var(--r-ctl);background-position:right 8px center}
+.cat{overflow:hidden}
+.cat table{width:100%;border-collapse:collapse}
+.cat th{height:44px;text-align:left;font-size:13px;font-weight:500;color:var(--mute);border-bottom:1px solid var(--line);padding:0 var(--s4)}
+.cat th button{display:inline-flex;align-items:center;gap:var(--s1);height:32px;padding:0 var(--s2);margin-left:calc(var(--s2) * -1);border:0;border-radius:var(--r-ctl);background:none;color:inherit;
+  transition:color var(--t-state),background var(--t-state)}
+.cat th button:hover{color:var(--ink);background:var(--hover)}
+.cat th .sort-ico{width:14px;height:14px;opacity:0;transition:opacity var(--t-state),rotate var(--t-panel) var(--ease)}
+.cat th[aria-sort="descending"] button,.cat th[aria-sort="ascending"] button{color:var(--ink)}
+.cat th[aria-sort="descending"] .sort-ico,.cat th[aria-sort="ascending"] .sort-ico{opacity:1}
+.cat th[aria-sort="ascending"] .sort-ico{rotate:180deg}
+.cat td{height:72px;padding:var(--s2) var(--s4);border-bottom:1px solid var(--rule);vertical-align:middle}
+.cat tbody tr:last-child td{border-bottom:0}
+.comp{cursor:pointer;transition:background var(--t-state)}
+.comp:hover,.comp:focus-within{background:var(--hover);--mute:var(--mute-lit)}
+.who{display:flex;align-items:center;gap:var(--s4);min-width:0}
+/* the cover: on hover it gives off its own light */
+.cv{position:relative;width:48px;height:48px;flex:none;border-radius:var(--r-ctl);display:grid;place-items:center;
+  background:var(--cover-grad);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.cv img{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}
+.cv span{font:italic 400 22px/1 var(--serif);color:rgba(233,228,218,.86)}
+.cv::before{content:"";position:absolute;inset:-4px;z-index:-1;border-radius:inherit;background:var(--glow-img,var(--cover-grad)) center/cover;
+  filter:blur(14px) saturate(1.3);opacity:0;transition:opacity .45s var(--ease)}
+.comp:hover .cv::before,.comp:focus-within .cv::before{opacity:.75}
+.who{isolation:isolate}
+/* a composition with no picture of its own takes one of four inks, by its name */
+.comp,.cv{--cover-grad:linear-gradient(160deg,#2f3556,#1d2236)}
+[data-c="1"] .cv{--cover-grad:linear-gradient(160deg,#3d3152,#241d33)}
+[data-c="2"] .cv{--cover-grad:linear-gradient(160deg,#4a3042,#2b1d29)}
+[data-c="3"] .cv{--cover-grad:linear-gradient(160deg,#25424c,#1a2a33)}
+.nm{min-width:0;display:flex;flex-direction:column;gap:var(--s1)}
+.open{display:block;max-width:100%;border:0;background:none;padding:0;text-align:left;color:var(--ink);font:italic 400 20px/1.25 var(--serif);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:underline;text-decoration-color:transparent;text-underline-offset:5px;text-decoration-thickness:1px;
+  transition:text-decoration-color var(--t-state)}
+.open:hover{text-decoration-color:var(--mute)}
+.open.untitled{color:var(--mute)}
+.comp .d{font:400 16px/1.35 var(--serif);color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62ch}
+.comp .snd{font-size:13px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70ch}
+.comp .warn{font-size:12px;color:var(--ember)}
+.c-when{width:180px;color:var(--ink2);white-space:nowrap}
+.c-acts{width:330px;text-align:right;white-space:nowrap}
+/* every action is a visible word: faint at rest, brighter on the row, full under the pointer */
+.a{height:32px;padding:0 var(--s3);border:0;border-radius:var(--r-ctl);background:none;color:var(--mute);font-size:13px;font-weight:500;
+  transition:color var(--t-state),background var(--t-state)}
+.comp:hover .a,.comp:focus-within .a{color:var(--ink2)}
+.a:hover{background:var(--hover-strong);color:var(--ink)!important}
+.a.del-forever{color:var(--ember)!important}
+.a.del-forever:hover{background:var(--ember-tint)}
+.comp.broken{cursor:default}
+.comp.broken td{color:var(--mute);font-size:13px;height:56px}
+.comp.broken b{color:var(--ink2);font-weight:500}
+/* renaming: the name is written in place, where it was printed, on an ink line the pen draws in;
+   it is as tall as a small control */
+.rename-in{width:min(460px,100%);height:32px;font:italic 400 20px/1.25 var(--serif);border:0;border-radius:0;padding:0;color:var(--ink);
+  background:linear-gradient(var(--ink),var(--ink)) left bottom/var(--wp) 1px no-repeat;animation:pen-in var(--t-screen) var(--ease) both}
+@keyframes pen-in{from{--wp:0%}}
+.rename-hint{font-size:12px;color:var(--mute)}
+.cat-empty{display:flex;align-items:center;gap:var(--s4);flex-wrap:wrap;padding:var(--s6) var(--s5);color:var(--ink2);font-size:16px}
+.empty-home{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s5);max-width:52ch;padding:var(--s7) 0}
+.empty-home p{font:400 22px/1.45 var(--serif);color:var(--ink2);text-wrap:pretty}
+/* rows arrive one after another the first time the list is shown */
+.comp.enter{animation:row-in .32s var(--ease) calc(var(--after,0s) + var(--i,0) * 30ms) both}
+@keyframes row-in{from{opacity:0;transform:translateY(6px)}}
+
+.foot{position:relative;z-index:1;display:flex;align-items:center;flex-wrap:wrap;gap:var(--s2);width:100%;max-width:1440px;margin:0 auto;padding:0 var(--s7) var(--s6);font-size:13px;color:var(--mute)}
+.foot a{display:inline-flex;align-items:center;gap:var(--s2);color:inherit;text-decoration:none;border-radius:var(--r-ctl)}
+.foot a:hover{color:var(--ink);text-decoration:underline;text-underline-offset:4px}
+.foot svg{opacity:.7;transition:opacity var(--t-state)}
+.foot a:hover svg{opacity:1}
+
+/* ---------- a menu (kept for keyboard users and the context-menu key) ---------- */
+.menu{position:fixed;z-index:65;min-width:216px;background:var(--card);border:1px solid var(--line);border-radius:var(--r-sm);
+  padding:var(--s1);box-shadow:0 18px 40px -16px var(--shadow);animation:pop-menu .18s var(--ease)}
+@keyframes pop-menu{from{opacity:0;transform:translateY(6px)}}
+.menu button{display:flex;align-items:center;gap:var(--s3);width:100%;height:36px;padding:0 var(--s3);border:0;background:transparent;
+  border-radius:var(--r-ctl);color:var(--ink);font-size:14px;text-align:left}
+.menu button:hover,.menu button:focus-visible{background:var(--lift)}
+.menu .danger-item{color:var(--ember)}
+.menu hr{border:0;border-top:1px solid var(--rule);margin:var(--s1) var(--s2)}
+.menu .key{margin-left:auto;font-size:12px;color:var(--mute)}
+
+/* ---------- a composition ----------
+   It sits on the same night as every other screen: no wash of the cover behind it. */
+.ed-top{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);height:56px}
+.back{display:inline-flex;align-items:center;gap:var(--s2);height:36px;border:0;background:transparent;color:var(--ink2);
+  padding:0 var(--s3) 0 var(--s2);margin-left:calc(var(--s2) * -1);border-radius:var(--r-ctl);font-size:14px;transition:color var(--t-state),background var(--t-state)}
+.back:hover{color:var(--ink);background:var(--hover)}
+.back svg{transition:translate var(--t-panel) var(--ease)}
+.back:hover svg{translate:-2px 0}
+
+/* the insert: cover, spine with the title, and the writer's words on ruled lines */
+.insert{display:grid;grid-template-columns:168px 40px minmax(0,1fr);min-height:168px;overflow:hidden}
+.cover-wrap{position:relative;height:100%;min-height:168px}
+.cover{width:100%;height:100%;border:0;padding:0;overflow:hidden;color:var(--mute);font-size:13px;
+  background:radial-gradient(1.2px 1.2px at 22% 18%,rgba(255,255,255,.55),transparent),radial-gradient(1px 1px at 70% 14%,rgba(255,255,255,.45),transparent),
+    radial-gradient(1.4px 1.4px at 84% 84%,rgba(243,211,140,.55),transparent),linear-gradient(170deg,#1b1a2c,#221f30 60%,#1d1a21);
+  display:grid;place-items:center;transition:color var(--t-state)}
+.cover span{display:flex;flex-direction:column;align-items:center;gap:var(--s2)}
+.cover span svg{width:20px;height:20px}
+.cover:hover{color:var(--ink)}
+.cover img{width:100%;height:100%;object-fit:cover;display:block;transition:scale .6s var(--ease)}
+.cover.has:hover img{scale:1.03}
+/* once there is a picture you can change it or take it away: the words are always there, faint */
+.cover-acts{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:var(--s1);padding:var(--s5) var(--s2) var(--s2);
+  background:linear-gradient(rgba(18,16,20,0),rgba(18,16,20,.92) 70%);opacity:.8;transition:opacity var(--t-state)}
+.cover-wrap:hover .cover-acts,.cover-acts:focus-within{opacity:1}
+.cover-acts button{height:28px;padding:0 var(--s2);border:0;border-radius:var(--r-ctl);background:transparent;color:var(--ink);font-size:12px;font-weight:500}
+.cover-acts button:hover{background:var(--hover-strong)}
+/* contain:size: the spine takes the insert's height and never sets it, so a long description written up
+   the spine is cut short with an ellipsis instead of stretching the insert down the page */
+.spine{contain:size;border-inline:1px solid var(--rule);display:flex;align-items:center;justify-content:center;background:var(--card2);overflow:hidden}
+.spine>span{writing-mode:vertical-rl;transform:rotate(180deg);font:600 12px/1 var(--ui);letter-spacing:.2em;text-transform:uppercase;color:var(--mute);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-height:calc(100% - var(--s5))}
+/* the spine carries the title and, like the card's, a second line in pencil: what the tape is for */
+.spine b{font-weight:600;color:var(--ink2);transition:color .6s var(--ease)}
+.spine-desc{font-weight:500;letter-spacing:.14em;text-transform:none}
+.spine-desc:not(:empty)::before{content:"·";margin-block:var(--s2)}
+/* while the tape plays, its title on the spine is printed in gold: no light around it */
+.screen-editor.playing .spine b{color:var(--gold)}
+/* The ruled lines sit where the description's words sit: --rule-y is the line under each 40px line of
+   writing, 4px under its baseline. The title keeps one height whatever its size, so a long title, set
+   smaller, never lifts the description off its lines.
+   The insert is a ruled sheet like the empty tracklist: the count sits on the rule after the description's,
+   and one whole line is left blank under it, so the frame falls where the next rule would be and no short
+   strip is left between the last rule and the frame (the count's 8px foot and the 32px padding make that line). */
+.meta{--pad-t:var(--s5);--title-h:52px;--rule-y:31px;--desc-h:40px;
+  display:flex;flex-direction:column;gap:var(--s1);padding:var(--pad-t) var(--s6) var(--s6);min-width:0;
+  /* the description's own lines (as many as it has, measured by the script into --desc-h) are drawn by the
+     insert, across the whole width of the words' column like the title's line; the printed rules run under all */
+  background:
+    repeating-linear-gradient(to bottom,transparent 0 var(--rule-y),var(--ink) var(--rule-y) calc(var(--rule-y) + 1px),transparent calc(var(--rule-y) + 1px) 40px)
+      0 calc(var(--title-h) + var(--s1))/var(--wp) var(--desc-h) no-repeat content-box,
+    repeating-linear-gradient(to bottom,transparent 0 var(--rule-y),var(--wl) var(--rule-y) calc(var(--rule-y) + 1px),transparent calc(var(--rule-y) + 1px) 40px)
+      0 calc(var(--title-h) + var(--s1))/100% var(--desc-h) no-repeat content-box,
+    repeating-linear-gradient(to bottom,transparent 0 39px,var(--rule) 39px 40px)
+      0 calc(var(--pad-t) + var(--title-h) + var(--s1) + var(--rule-y) - 39px)/100% 100% no-repeat padding-box}
+/* Writing in place. The writer's words are edited where they are printed, never in a box: no frame,
+   no ground, no ring. Under the pointer the writing line shows in the field edge; while you write,
+   the pen draws it in ink from the left. Focus is that ink line and the caret (The Ink Focus Rule,
+   as it applies to words written on a line). */
+@property --wl{syntax:"<color>";inherits:false;initial-value:transparent}
+@property --wp{syntax:"<percentage>";inherits:false;initial-value:0%}
+.title,.desc,.rename-in{outline:none}
+.title,.meta,.rename-in{transition:--wl var(--t-state),--wp var(--t-screen) var(--ease)}
+.title:hover,.meta:has(.desc:hover){--wl:var(--edge)}
+.title:focus,.meta:has(.desc:focus),.rename-in{--wp:100%}
+/* a long title, set smaller, keeps its words down on its line rather than floating in the middle */
+.title{display:block;width:100%;height:var(--title-h);min-width:0;border:0;padding:max(0px,calc(var(--title-h) - 1.15em - var(--s1))) 0 0;border-radius:0;font:italic 400 44px/1.15 var(--serif);letter-spacing:-.005em;
+  text-overflow:ellipsis;color:var(--ink);
+  background:linear-gradient(var(--ink),var(--ink)) left bottom/var(--wp) 1px no-repeat,linear-gradient(var(--wl),var(--wl)) left bottom/100% 1px no-repeat;
+  transition:--wl var(--t-state),--wp var(--t-screen) var(--ease),font-size .2s var(--ease)}
+.title.t-long{font-size:34px}
+.title.t-xlong{font-size:28px}
+.title.t-xxlong{font-size:23px}
+.title::placeholder{color:var(--mute);opacity:1}
+/* the description lies on the ruled lines; without one a faint sample says what the space is for.
+   Its words keep a 72ch measure; its lines are inked across the whole column (see .meta). */
+.desc{max-width:72ch;font:400 19px/40px var(--serif);letter-spacing:.005em;color:var(--ink2);overflow-wrap:anywhere;cursor:text}
+.desc:not(:focus){display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.desc:empty::before{content:attr(data-ph);color:var(--mute);font-style:italic}
+/* p.count, not .count: the field "how many times" in a sound's drawer carries the same class name */
+p.count{margin-top:auto;padding-block:var(--s2);color:var(--mute);font-size:13px}
+.count .part{white-space:nowrap}
+.count .sep{margin:0 var(--s2);opacity:.7}
+.count .warn-line{color:var(--ember)}
+.count .now{color:var(--gold)}
+
+/* the transport: play, time, how loud, and what you can do with the whole tape.
+   It stays pinned while you scroll, on a solid strip, and says whether the work is saved. */
+.transport{position:sticky;top:0;z-index:5;margin:0 0 var(--s4);padding:var(--s5) 0 var(--s4)}
+.transport::before{content:"";position:absolute;z-index:-1;left:50%;transform:translateX(-50%);width:calc(100vw - var(--sbw,0px));top:0;bottom:0;
+  background:rgba(18,16,20,.94);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom:1px solid var(--rule);opacity:0;transition:opacity .25s var(--ease);pointer-events:none}
+.transport.stuck::before{opacity:1}
+.transport.stuck{padding:var(--s3) 0}
+.tmain{display:flex;align-items:center;gap:var(--s5);flex-wrap:wrap}
+/* play: paper at rest; gold, with a soft breathing light, while the tape sounds */
+.play{position:relative;width:56px;height:56px;padding:0;border-radius:50%;border:0;background:var(--ink);color:var(--on-ink);display:grid;place-items:center;flex:none;
+  transition:transform .1s,background .4s var(--ease),color .4s var(--ease),box-shadow .4s var(--ease)}
+.play:hover{background:var(--ink-lit);box-shadow:0 8px 26px -10px rgba(233,228,218,.4)}
+.play:active{transform:scale(.96)}
+.play svg{width:22px;height:22px}
+.play.playing{background:var(--gold);color:var(--on-gold);box-shadow:0 0 0 7px rgba(216,168,69,.22),0 0 38px rgba(216,168,69,.46)}
+.imm-play.playing{animation:lamp 3.2s ease-in-out infinite}
+@keyframes lamp{0%,100%{box-shadow:0 0 0 5px rgba(216,168,69,.16),0 0 22px rgba(216,168,69,.3)}50%{box-shadow:0 0 0 7px rgba(216,168,69,.22),0 0 38px rgba(216,168,69,.46)}}
+.clockbox{display:flex;flex-direction:column;min-width:96px}
+.clock{font-variant-numeric:tabular-nums;font-size:16px;font-weight:500;letter-spacing:.01em}
+.clockbox small{font-size:12px;color:var(--ink2);white-space:nowrap}
+/* the transport sits on the cover's own light, not on a card: its quiet words use the brighter pencil */
+.master{display:flex;align-items:center;gap:var(--s3);color:var(--ink2);font-size:13px;white-space:nowrap}
+.master input{width:200px}
+.master .val{min-width:40px;color:var(--ink);font-variant-numeric:tabular-nums}
+.tbar-end{display:flex;align-items:center;gap:var(--s3);margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
+
+/* ---------- is my work safe? ----------
+   A status with a sign as well as words, so the state never depends on colour or reading alone. */
+.save-plate{display:inline-flex;align-items:center;justify-content:flex-end;gap:var(--s2);min-width:232px;height:40px;padding:0 var(--s2);border-radius:var(--r-sm);
+  border:1px solid transparent;color:var(--ink2);font-size:13px;white-space:nowrap;transition:border-color .3s}
+.save-plate .when{color:var(--ink2);opacity:.85}
+.save-plate .when::before{content:"·";margin-right:var(--s2)}
+.save-plate .ring{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--ink2);flex:none}
+.save-plate .tick{width:8px;height:8px;border-radius:50%;background:var(--saved);flex:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--saved) 14%,transparent)}
+.save-plate .alert{width:16px;height:16px;flex:none;color:var(--ember)}
+.save-plate .alert svg{width:16px;height:16px}
+.save-plate.saving .ring{border-right-color:transparent;animation:spin .9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.save-plate.err{border-color:var(--ember);color:var(--ember-ink)}
+.save-plate.err .when{color:var(--ember-ink)}
+.save-plate.flash .tick{animation:saved-pulse .6s var(--ease)}
+@keyframes saved-pulse{50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--saved) 22%,transparent)}}
+
+/* while one sound is soloed, every other row is silent: say so where it can always be seen */
+.solo-note{display:flex;align-items:center;gap:var(--s2);margin-top:var(--s3);padding:var(--s2) var(--s3);border:1px solid var(--rule);border-radius:var(--r-print);
+  background:var(--card);font-size:13px;color:var(--ink2)}
+.solo-note .end{margin-left:auto}
+.solo-note b{font-weight:600;color:var(--ink)}
+.solo-note.sounding b{color:var(--gold)}
+
+/* the tracklist, the export panel under it, and "Your sounds" docked beside it while it is open */
+.ed-main{position:relative;min-width:0;display:grid;grid-template-columns:minmax(0,1fr);align-items:start}
+.ed-main>.tracks,.ed-main>.export{grid-column:1}
+
+/* ---------- the tracklist ----------
+   At rest each sound keeps only what a listener touches: its number, its picture (listen alone),
+   its name with a line of status, a silence switch with its volume, and an opener that says what
+   is inside. Everything else lives in the drawer under the line, opened by clicking the line.
+   The line has a measure of its own: the name takes at most 360px, and the volume and what the drawer holds
+   follow it directly, so a sound and its controls read as one line of the tracklist however wide the window.
+   On a wide window what is left of the line stays empty at its end, under the printed rule.
+   The line follows the width of the list itself, not of the window, so it holds when "Your sounds" is docked. */
+.tracks{--cols:28px 49px minmax(0,1fr) auto auto auto;--vol-w:120px;--pad:var(--s5);overflow:hidden;container:tracks/inline-size}
+.tl-head{display:flex;align-items:center;gap:var(--s3);min-height:72px;padding:var(--s4) var(--pad);border-bottom:1px solid var(--line)}
+.tl-head .find{flex:0 1 300px}
+.tl-head .add-sound{margin-left:auto}
+.add-sound.ghost[aria-expanded="true"],.more-go[aria-expanded="true"]{background:var(--rule);border-color:var(--mute)}
+.more-go svg{transition:rotate var(--t-panel) var(--ease)}
+.more-go[aria-expanded="true"] svg{rotate:180deg}
+.list{position:relative;display:flex;flex-direction:column}
+/* the margin rule of the insert, printed in the rule colour, centred in the space between number and picture */
+.list:not(:empty)::before{content:"";position:absolute;z-index:2;top:0;bottom:0;left:calc(var(--pad) + 28px + var(--s3));width:1px;background:var(--rule);pointer-events:none}
+.tracks .empty{--ruled:40px;padding:var(--ruled) var(--pad) var(--ruled) calc(var(--pad) + 28px + var(--s3) + 49px + var(--s3));font:400 18px/var(--ruled) var(--serif);color:var(--ink2);
+  /* a ruled sheet: one empty line above the words, a rule under every line, and one line's space left blank at the foot,
+     so the last rule never sits a few pixels off the frame */
+  background:repeating-linear-gradient(to bottom,transparent 0 calc(var(--ruled) - 1px),var(--rule) calc(var(--ruled) - 1px) var(--ruled)) 0 0/100% calc(100% - var(--ruled)) no-repeat;text-wrap:pretty}
+.tracks .empty b{font-weight:500;color:var(--ink)}
+
+.track{position:relative;border-bottom:1px solid var(--rule)}
+.track:last-child{border-bottom:0}
+.trow{display:grid;grid-template-columns:var(--cols);gap:var(--s3);align-items:center;min-height:64px;padding:var(--s2) var(--pad);cursor:pointer;transition:background var(--t-state)}
+/* the margin rule stands in the gap after the number: the picture keeps the same 12px from the rule as the number has before it */
+.trow>.pic{margin-left:calc(var(--s3) + 1px)}
+.track:hover>.trow{background:var(--hover);--mute:var(--mute-lit)}
+/* passing quickly over many lines: the light comes in softly but leaves at once, so only one line is ever lit (issue #22) */
+.track:not(:hover)>.trow,.track:not(:hover) .grip svg,.track:not(:hover) .grip .num,.track:not(:hover) .opener{transition:none}
+.track.is-open>.trow{background:var(--card2)}
+.track.enter{animation:row-in .3s var(--ease) calc(var(--after,0s) + var(--i,0) * 35ms) both}
+
+/* the number is also the handle that reorders the list */
+.grip{position:relative;display:grid;place-items:center;width:28px;height:32px;border-radius:var(--r-ctl);color:var(--mute);cursor:grab;touch-action:none;
+  font-size:12px;font-variant-numeric:tabular-nums;transition:color var(--t-state),background var(--t-state)}
+.grip svg{position:absolute;right:calc(var(--s1) * -1);width:16px;height:16px;opacity:0;transition:opacity var(--t-state)}
+/* a column of numbers is set flush right, so the margin rule sits exactly halfway to the picture */
+.grip .num{justify-self:end;transition:opacity var(--t-state)}
+.track:hover .grip svg,.grip:focus-visible svg{opacity:1}
+.track:hover .grip .num,.grip:focus-visible .num{opacity:0}
+.grip:hover,.grip:focus-visible{background:var(--hover);color:var(--ink)}
+
+/* the picture of a sound, which is also its "listen alone" button */
+.pic{position:relative;width:36px;height:36px;padding:0;border-radius:var(--r-ctl);border:1px solid var(--line);overflow:hidden;color:var(--ink);
+  background:linear-gradient(140deg,#2c3346,#1f2430);display:grid;place-items:center;transition:border-color var(--t-state)}
+.pimg{position:absolute;inset:0;background:center/cover no-repeat;opacity:0;transition:opacity .5s var(--ease)}
+.pimg.show{opacity:1}
+.pglyph{position:relative;z-index:1;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:rgba(18,16,20,.55);
+  opacity:.6;transition:opacity var(--t-state),background var(--t-state)}
+.pglyph svg{width:12px;height:12px}
+.pic:not(:disabled):hover .pglyph,.pic:focus-visible .pglyph{opacity:1}
+.pic:not(:disabled):hover{border-color:var(--mute)}
+.pic:disabled{cursor:default}
+/* listening to it alone is "sounding": gold, printed, with no light around it */
+.pic.on{border-color:var(--gold)}
+.pic.on .pglyph{opacity:1;background:var(--gold);color:var(--on-gold)}
+
+.nmcol{min-width:0;display:flex;flex-direction:column;justify-content:center;align-items:flex-start}
+/* the name, in the writer's type, as wide as its words (the rest of the line opens the drawer);
+   a mirror of its text carries the pen stroke at exactly its width */
+.nmw{position:relative;display:block;min-width:0;max-width:100%}
+.name{display:block;field-sizing:content;min-width:4ch;max-width:100%;height:28px;padding:0;border:0;border-radius:var(--r-print);background:transparent;color:var(--ink);
+  font:400 20px/28px var(--serif);letter-spacing:.005em;text-overflow:ellipsis;white-space:nowrap;cursor:text;
+  text-decoration:underline;text-decoration-color:transparent;text-underline-offset:6px;text-decoration-thickness:1px;transition:text-decoration-color var(--t-state)}
+.name:hover{text-decoration-color:var(--edge)}
+/* written in place, like the title: the ink line under the words is the focus, with the caret */
+.name:focus{text-decoration-color:var(--ink);outline:none}
+.ink{position:absolute;left:0;top:0;max-width:100%;height:28px;font:400 20px/28px var(--serif);letter-spacing:.005em;white-space:pre;color:transparent;
+  overflow:hidden;pointer-events:none}
+/* the signature: when a sound starts, its gold stroke draws in under the name like a pen. Ink, not light:
+   only the faintest edge, so a list of sounding names never looks highlighted */
+.ink::after{content:"";position:absolute;left:-2px;right:-6px;bottom:1px;height:2px;border-radius:var(--r-print);
+  background:linear-gradient(90deg,rgba(216,168,69,0),var(--gold) 12%,var(--gold-hi) 70%,rgba(216,168,69,0));box-shadow:0 1px 4px rgba(216,168,69,.25);
+  transform-origin:left center;transform:rotate(-.8deg) scaleX(0);opacity:0;transition:transform .7s var(--ease),opacity .5s var(--ease)}
+.track.live .ink::after,.track.hit .ink::after{transform:rotate(-.8deg) scaleX(1);opacity:1}
+.track.live .grip .num,.track.hit .grip .num{color:var(--gold)}
+.sub{display:flex;align-items:baseline;gap:var(--s2);min-width:0;max-width:100%;font-size:12px;color:var(--mute);white-space:nowrap;overflow:hidden}
+.sub>*{flex:none}
+.sub>:empty{display:none}
+/* the place it is in, or how many effects it has: the one thing on this line that tells two sounds apart */
+.sub .fxn{flex:0 1 auto;overflow:hidden;text-overflow:ellipsis;color:var(--ink);font-weight:500}
+.dur{font-variant-numeric:tabular-nums;color:var(--ink2)}
+.why-off,.next{overflow:hidden;text-overflow:ellipsis;flex:0 1 auto}
+.sub>*+*:not(:empty)::before{content:"·";margin-right:var(--s2);color:var(--mute)}
+
+/* silence, and how loud */
+/* the whole height of the line is the volume's own: a click beside the controls never opens the drawer (issue #24) */
+.volw{display:flex;align-items:center;gap:var(--s2);min-width:0;align-self:stretch;margin-block:calc(var(--s2) * -1)}
+.volw .vol{flex:none;width:var(--vol-w)}
+.vpct{min-width:36px;text-align:right;font-size:12px;font-weight:500;color:var(--ink2)}
+/* listen to this one alone: beside the settings, where it is used while balancing */
+.only[aria-checked="true"]{background:var(--ink);border-color:var(--ink);color:var(--on-ink)}
+.only.sounding[aria-checked="true"]{background:var(--gold);border-color:var(--gold);color:var(--on-gold)}
+.mute{display:grid;place-items:center;width:32px;height:32px;flex:none;padding:0;border:1px solid transparent;border-radius:var(--r-ctl);background:transparent;color:var(--ink2);
+  transition:background var(--t-state),color var(--t-state),border-color var(--t-state)}
+/* the speaker answers to the full height of the line and half the gap on each side, not only to its 32px plate */
+.mute{position:relative}
+.mute::before{content:"";position:absolute;inset:-16px calc(var(--s1) * -1) -16px calc(var(--s3) / -2)}
+.mute:hover{background:var(--hover-strong);color:var(--ink)}
+/* silenced: a printed edge and a raised plate, never the brightest thing on its line */
+.mute[aria-pressed="true"]{border-color:var(--ink);background:var(--lift);color:var(--ink)}
+/* the opener of the drawer says what it opens; how the sound plays is written under its name */
+.opener{display:inline-flex;align-items:center;gap:var(--s2);justify-self:start;max-width:100%;min-width:0;height:32px;padding:0 var(--s2) 0 var(--s3);border:1px solid var(--rule);
+  border-radius:var(--r-ctl);background:transparent;color:var(--ink2);font-size:13px;font-weight:500;white-space:nowrap;
+  transition:background var(--t-state),color var(--t-state),border-color var(--t-state)}
+.opener svg{flex:none;color:var(--mute);transition:rotate var(--t-panel) var(--ease),color var(--t-state)}
+.track:hover .opener{border-color:var(--line);color:var(--ink)}
+.opener:hover{border-color:var(--mute)!important}
+.opener[aria-expanded="true"]{background:var(--rule);border-color:var(--mute);color:var(--ink)}
+.opener[aria-expanded="true"] svg{color:var(--ink)}
+.opener[aria-expanded="true"] svg:last-child{rotate:180deg}
 
 /* fields */
-select,input[type=number]{border:1px solid var(--ctl);background-color:var(--raise);border-radius:var(--r-ctl);color:var(--text);height:32px;transition:border-color .12s}
-select:hover:not(:disabled),input[type=number]:hover:not(:disabled){border-color:var(--text2)}
-select{-webkit-appearance:none;appearance:none;padding:0 28px 0 var(--s3);cursor:pointer;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6' fill='none' stroke='%236f78ad' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m1 1 4 4 4-4'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;background-position:right 10px center;background-size:10px}
-select:disabled,input[type=number]:disabled{background:var(--raise);border-color:transparent;color:var(--text3);cursor:not-allowed}
-input[type=number]{width:66px;padding:0 var(--s2);text-align:center;-moz-appearance:textfield}
+select,input[type=number]{height:32px;border:1px solid var(--edge);background-color:var(--field);border-radius:var(--r-ctl);color:var(--ink);font-size:13px;
+  transition:border-color var(--t-state)}
+select:hover:not(:disabled),input[type=number]:hover:not(:disabled){border-color:var(--mute)}
+/* the arrow of a list to choose from: Lucide's chevron-down (ISC, see THIRD-PARTY-NOTICES.md) */
+select{-webkit-appearance:none;appearance:none;padding:0 var(--s6) 0 var(--s2);cursor:pointer;min-width:0;text-overflow:ellipsis;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238c8693' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right var(--s2) center;background-size:16px}
+select option{background:var(--card);color:var(--ink)}
+select:disabled,input[type=number]:disabled{border-color:var(--rule);color:var(--mute);cursor:not-allowed}
+input[type=number]{width:64px;padding:0 var(--s2);text-align:center;-moz-appearance:textfield;font-variant-numeric:tabular-nums}
 input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-.search{width:100%;height:40px;border:1px solid var(--ctl);background:var(--raise);border-radius:var(--r-sm);padding:0 var(--s3);transition:border-color .12s}
-.search::placeholder{color:var(--muted)}
-.search:hover{border-color:var(--text2)}
-.search:focus{border-color:var(--text)}
+.search{width:100%;height:40px;border:1px solid var(--edge);background:var(--field);border-radius:var(--r-sm);padding:0 var(--s3);color:var(--ink);transition:border-color var(--t-state)}
+.search::placeholder{color:var(--mute);opacity:1}
+.search:hover{border-color:var(--mute)}
+.search:focus{border-color:var(--ink2)}
+/* our own tick box, square-cut like a box printed on a form: the browser's grey one belongs to no palette */
+input[type=checkbox]{appearance:none;-webkit-appearance:none;width:16px;height:16px;margin:0;flex:none;border:1.5px solid var(--mute);
+  border-radius:var(--r-print);background:var(--field);display:grid;place-items:center;cursor:pointer;transition:background var(--t-state),border-color var(--t-state)}
+input[type=checkbox]:hover{border-color:var(--ink)}
+input[type=checkbox]:checked{background:var(--ink);border-color:var(--ink)}
+input[type=checkbox]:checked::after{content:"";width:9px;height:5px;border:2px solid var(--bg);border-top:0;border-right:0;transform:rotate(-45deg) translate(1px,-1px)}
+input[type=checkbox]:disabled{border-color:var(--rule);cursor:not-allowed}
+.check{display:inline-flex;align-items:center;gap:var(--s2);cursor:pointer;white-space:nowrap;height:32px;font-size:13px;color:var(--ink2)}
 
-/* sliders: the filled part shows the value ("position" fills outwards from the centre) */
-input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:32px;background:transparent;margin:0;cursor:pointer;
-  --a:0%;--b:50%;--fill:var(--text);--rail:var(--ctl);
+/* sliders: a quiet rail; the filled part is what the eye reads ("left – right" fills outwards from the centre) */
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:28px;background:transparent;margin:0;cursor:pointer;
+  --a:0%;--b:50%;--fill:var(--ink2);--rail:var(--line);
   --track:linear-gradient(to right,var(--rail) var(--a),var(--fill) var(--a),var(--fill) var(--b),var(--rail) var(--b))}
-input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:4px;background:var(--track)}
-input[type=range]::-moz-range-track{height:4px;border-radius:4px;background:var(--track)}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--fill);border:2px solid var(--surface);margin-top:-6px;transition:transform .12s;box-shadow:0 0 0 1px var(--fill)}
-input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--fill);border:2px solid var(--surface);box-shadow:0 0 0 1px var(--fill)}
-input[type=range]:hover::-webkit-slider-thumb{transform:scale(1.12)}
-input[type=range]:active::-webkit-slider-thumb{transform:scale(.96)}
-input[type=range]:disabled{cursor:not-allowed;--fill:var(--text3);--rail:var(--line)}
-.track.live .vol{--fill:var(--glow-ink)}
+input[type=range]::-webkit-slider-runnable-track{height:3px;border-radius:var(--r-pill);background:var(--track)}
+input[type=range]::-moz-range-track{height:3px;border-radius:var(--r-pill);background:var(--track)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--ink);border:0;margin-top:-5.5px;
+  box-shadow:0 0 0 3px var(--card);transition:transform var(--t-state),box-shadow var(--t-state)}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--ink);border:0}
+input[type=range]:hover::-webkit-slider-thumb{transform:scale(1.14)}
+input[type=range]:active::-webkit-slider-thumb{transform:scale(.94)}
+input[type=range]:focus-visible{outline-offset:2px;border-radius:var(--r-ctl)}
+input[type=range]:disabled{cursor:not-allowed;--fill:var(--mute);--rail:var(--rule)}
+.transport input[type=range]::-webkit-slider-thumb,.panel input[type=range]::-webkit-slider-thumb{box-shadow:none}
+.track:hover>.trow input[type=range]::-webkit-slider-thumb{box-shadow:none}
+.fxp input[type=range]::-webkit-slider-thumb{box-shadow:0 0 0 3px var(--card2)}
+/* the volume of a sound that is sounding wears the gold */
+.track.live .vol{--fill:var(--gold)}
 
-/* drag to reorder */
+/* small switches */
+.chip,.icon{display:inline-flex;align-items:center;justify-content:center;flex:none;height:32px;min-width:32px;padding:0 var(--s2);
+  border:1px solid var(--line);border-radius:var(--r-ctl);background:transparent;color:var(--ink2);font-size:12px;font-weight:600;white-space:nowrap;
+  transition:color var(--t-state),border-color var(--t-state),background var(--t-state),transform .08s}
+.icon{padding:0}
+.chip:hover:not(:disabled),.icon:hover:not(:disabled){border-color:var(--mute);color:var(--ink);background:var(--hover)}
+.chip:active:not(:disabled),.icon:active:not(:disabled){transform:translateY(1px)}
+.chip:disabled,.icon:disabled{border-color:var(--rule);color:var(--mute);cursor:not-allowed}
+/* a switch: a printed track with a knob; on, it is inked. While the tape sounds, "only this" is gold */
+.switch{display:inline-flex;align-items:center;gap:var(--s2);height:32px;padding:0 var(--s2) 0 var(--s1);border:0;border-radius:var(--r-ctl);background:transparent;
+  color:var(--ink2);font-size:13px;font-weight:500;transition:background var(--t-state),color var(--t-state)}
+.switch:hover{background:var(--hover);color:var(--ink)}
+.switch .tr{position:relative;width:32px;height:18px;flex:none;border-radius:var(--r-pill);border:1.5px solid var(--mute);background:var(--field);transition:background var(--t-state),border-color var(--t-state)}
+.switch .tr::after{content:"";position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;background:var(--ink2);transition:left var(--t-panel) var(--ease),background var(--t-state)}
+.switch[aria-checked="true"]{color:var(--ink)}
+.switch[aria-checked="true"] .tr{background:var(--ink);border-color:var(--ink)}
+.switch[aria-checked="true"] .tr::after{left:15px;background:var(--bg)}
+.switch.sounding[aria-checked="true"] .tr{background:var(--gold);border-color:var(--gold)}
+.switch.sounding[aria-checked="true"] .tr::after{background:var(--on-gold)}
+
+/* a silenced sound is not faded into illegibility — it is recoloured, and says why it is silent */
+.track.off .name{color:var(--mute)}
+.track.off .pic{opacity:.55}
+.track.off .vol{--fill:var(--mute)}
+.track.hit .pic{border-color:var(--gold)}
+/* a picture held over a line: the same ink edge as the drop zone, not gold (gold means sounding) */
+.track.imgdrop{background:var(--hover);box-shadow:inset 0 0 0 1px var(--ink2)}
+.track.missing .grip{color:var(--ember)}
+.track.missing .name{color:var(--mute)}
+.trow>.warn{grid-column:4/-1;display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap;font-size:13px;color:var(--ember-ink);margin:0;cursor:default}
+.trow>.warn b{color:var(--ember);font-weight:600}
+.trow>.warn .ghost{border-color:color-mix(in srgb,var(--ember) 40%,var(--card))}
+.trow>.warn .ghost:hover{border-color:var(--ember)}
+
+/* ---------- the drawer of one sound ----------
+   Left, a narrow column with what is the sound's own: how it plays, which side it is on, its picture, each at its own
+   size. Right, the effects as a table on three columns: the name, how much (right beside the name), then what it does.
+   "Where it is" is the first line of the same table. An effect that is on lights its whole line.
+   It unfolds downwards from its line and the lines below move with it; it folds back a little quicker. */
+.fxp{position:relative;z-index:3;display:grid;grid-template-rows:0fr;visibility:hidden;
+  transition:grid-template-rows var(--t-leave) var(--ease),visibility 0s linear var(--t-leave)}
+.track.is-open>.fxp{grid-template-rows:1fr;visibility:visible;transition:grid-template-rows var(--t-panel) var(--ease),visibility 0s}
+/* the fold is drawn inside the drawer, so a closed one adds nothing to the height of its line */
+.fxp-in{min-height:0;overflow:hidden;background:var(--card2)}
+.fxp-in::before{content:"";display:block;border-top:1px dashed var(--rule)}
+.fx-body,.dfoot{opacity:0;transition:opacity var(--t-leave) var(--ease)}
+.track.is-open .fx-body,.track.is-open .dfoot{opacity:1;transition:opacity var(--t-panel) var(--ease) .06s}
+.fxp h4{font:600 13px/20px var(--ui);color:var(--ink);margin:0}
+.fx-body{display:grid;grid-template-columns:288px minmax(0,1fr)}
+.fx-own{display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--rule)}
+.fx-cell{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s2);min-width:0;padding:var(--s4) var(--pad)}
+.fx-cell+.fx-cell{border-top:1px solid var(--rule)}
+.fx-pic{flex:1}
+/* how it plays: the way first, as wide as the column; what goes with it in lines of words under it */
+.fx-how{flex-direction:row;flex-wrap:wrap;align-items:center;gap:var(--s2) var(--s3)}
+.fx-how>h4{flex:0 0 100%}
+.fx-how>select{flex:0 0 100%;width:100%}
+.opts{display:flex;align-items:center;gap:var(--s2);font-size:13px;color:var(--ink2);flex-wrap:wrap;min-height:32px;white-space:nowrap}
+.opts input[type=range]{flex:1 1 40px;min-width:40px;max-width:120px}
+.fx-how .opts:has(input[type=range]){flex:1 1 104px;flex-wrap:nowrap}
+.fx-how .opts:has(input[type=number]){flex:0 0 100%;flex-wrap:nowrap}
+.val{color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+/* which side: the title and the place in words on one line, the listener under it at its own size */
+.fx-head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s3);width:100%}
+.fx-head .val{font-size:13px;font-weight:600}
+.side{position:relative;align-self:center}
+/* the slider is still there for the keyboard and for screen readers; the eye uses the dot */
+.side .pan{position:absolute;inset:0;width:100%;height:100%;opacity:0;pointer-events:none}
+.side-fig{display:block;width:200px;height:112px;overflow:visible;fill:none;stroke:var(--mute);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;cursor:pointer;touch-action:none}
+.sf-hit{fill:transparent;stroke:none;pointer-events:all}
+.sf-arc{stroke:var(--edge);stroke-dasharray:2 4}
+.sf-lr{fill:var(--mute);stroke:none;font:500 10px var(--ui)}
+.sf-l,.sf-r{stroke:var(--ink2)}
+.sf-dot{cursor:grab}
+.sf-dot circle:first-child{stroke:var(--ink2);fill:var(--card2)}
+.sf-dot circle:last-child{fill:var(--ink);stroke:none}
+.side .pan:focus-visible+.side-fig .sf-dot circle:first-child{stroke:var(--ink);stroke-width:2.5}
+.side-tip{align-self:center}
+/* the picture, small, beside the two words that change it */
+.pic-row{display:flex;align-items:flex-start;gap:var(--s3);width:100%}
+.pthumb{flex:none;width:44px;height:44px;border:1px solid var(--line);border-radius:var(--r-ctl);background:linear-gradient(140deg,#2c3346,#1f2430) center/cover no-repeat}
+.pic-acts{flex:1;display:flex;flex-direction:column;gap:var(--s1);min-width:0}
+.fx-note{margin:0;font-size:12px;line-height:1.4;color:var(--mute);text-wrap:pretty}
+/* the table of effects: name, how much, what it does. The lines share whatever height the left column needs */
+.fx-eff{display:flex;flex-direction:column;min-width:0}
+.fx-row{flex:1 0 auto;display:grid;grid-template-columns:104px 288px minmax(0,1fr);column-gap:var(--s4);align-items:center;min-height:52px;
+  padding:var(--s2) var(--pad);border-top:1px solid var(--rule);transition:background var(--t-state)}
+.fx-where{min-height:72px;border-top:0}
+/* the place is as wide as the amounts under it: one column, two clean edges */
+.fx-where select{width:100%}
+.fx-where .fx-note{color:var(--ink2);max-width:64ch}
+.fx-name{position:relative;font:500 13px/20px var(--ui);color:var(--ink2)}
+.fx-hint{margin:0;font-size:12px;line-height:1.4;color:var(--mute-lit);text-wrap:pretty}
+/* an effect that is on lights its line: a faint plate across it, a mark before its name, the name and its word in ink */
+.fx-row.is-on{background:var(--hover)}
+.fx-row.is-on .fx-name{color:var(--ink);font-weight:600}
+.fx-row.is-on .fx-name::before{content:"";position:absolute;left:calc(var(--s3) * -1);top:50%;width:5px;height:5px;margin-top:-2.5px;border-radius:50%;background:var(--ink)}
+.fx-row.is-on .fx-hint{color:var(--ink)}
+.fx-amt{width:288px;max-width:100%;height:36px}
+.fx-amt button{padding:0 var(--s1);white-space:nowrap}
+/* the words of "Passing by" are of very different lengths: each takes the room its own length asks for */
+.fx-amt[data-k="trajectory"] button{flex:1 1 auto;padding:0 var(--s2)}
+.fx-row:not(.is-on) .fx-amt button.on{color:var(--ink2)}
+.fx-row.is-on .seg-pill{background:var(--ink);box-shadow:none}
+.fx-row.is-on .fx-amt button.on{color:var(--on-ink);font-weight:600}
+/* the choice that belongs to an effect ends its sentence, and is there only while the effect is on */
+.fx-kind{white-space:nowrap}
+.fx-row:not(.is-on) .fx-kind,.fx-row.is-on .fx-rest{display:none}
+select.kind{field-sizing:content;height:28px;margin-left:var(--s1);padding:0 var(--s5) 0 var(--s2);font-size:12px;font-weight:500;background-position:right var(--s1) center;vertical-align:middle}
+/* what is done with the sound itself, on the fold at the foot: keep it at one end, take it away at the other */
+.dfoot{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);flex-wrap:wrap;padding:var(--s3) var(--pad);border-top:1px dashed var(--rule)}
+.dfoot .keep svg{width:16px;height:16px}
+.dfoot .keep.is-saved{border-color:var(--mute)}
+.dfoot .del{color:var(--ember)}
+.dfoot .del:hover{background:var(--ember-tint);color:var(--ember)}
+
+/* reordering by dragging the number */
 .track.dragging{opacity:.4}
-.list.sorting .track{transition:transform .26s cubic-bezier(.2,.8,.2,1),border-color .3s,box-shadow .2s}
-.list.sorting:not(.tiles) .track.shift{transform:translateY(12px)}
-.list.sorting.tiles .track.shift{transform:translateX(10px)}
-.list.sorting:not(.tiles) .track.shift-up{transform:translateY(-4px)}
-.list.sorting.tiles .track.shift-up{transform:translateX(-4px)}
-.list:not(.tiles) .track.drop-before{box-shadow:0 -3px 0 0 var(--glow-ink)}
-.list:not(.tiles) .track.drop-after{box-shadow:0 3px 0 0 var(--glow-ink)}
-.list.tiles .track.drop-before{box-shadow:-3px 0 0 0 var(--glow-ink)}
-.list.tiles .track.drop-after{box-shadow:3px 0 0 0 var(--glow-ink)}
-
-/* tiles view */
-.tname{display:none}
-.list.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:var(--s3)}
-.list.tiles .track:not(.focused){min-height:120px;padding:var(--s4);cursor:pointer;display:flex;flex-direction:column;transition:border-color .3s,transform .12s}
-.list.tiles .track:not(.focused):hover{transform:translateY(-2px);border-color:var(--ctl)}
-.list.tiles .track:not(.focused)>.grid,.list.tiles .track:not(.focused)>.mode,.list.tiles .track:not(.focused)>.fxp,.list.tiles .track:not(.focused)>.warn{display:none}
-.list.tiles .track:not(.focused) .top{flex-wrap:wrap;margin:0;flex:1;align-content:space-between;row-gap:var(--s3)}
-.list.tiles .track:not(.focused) .name,.list.tiles .track:not(.focused) .dur,
-.list.tiles .track:not(.focused) .imgctl,.list.tiles .track:not(.focused) .fxb,.list.tiles .track:not(.focused) .seam,
-.list.tiles .track:not(.focused) .keep,.list.tiles .track:not(.focused) .del,.list.tiles .track:not(.focused) .why-off{display:none}
-/* a tile exists to be recognised quickly: the whole name shows, on two lines if it needs them */
-.list.tiles .track:not(.focused) .tname{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;
-  flex:1 0 100%;min-width:0;font-size:16px;font-weight:600;line-height:1.3;color:var(--text)}
-.list.tiles .track:not(.focused).off .tname{color:var(--muted)}
-.list.tiles .track:not(.focused) .tdur{display:block;margin-left:auto;font-size:13px;color:var(--text2);font-variant-numeric:tabular-nums}
-.tdur{display:none}
-.list.tiles .track:not(.focused) .btns{width:100%;justify-content:flex-start;align-items:center}
-.list.tiles .track:not(.focused) .btns .icon:not(.on),.list.tiles .track:not(.focused) .btns .chip:not(.on){background:color-mix(in srgb,var(--surface) 78%,transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
-.list.tiles .tbg.show{opacity:.5}
-/* a plate behind the name line, so the picture never swallows it */
-.list.tiles .track:not(.focused) .tbg::after{background:linear-gradient(to bottom,color-mix(in srgb,var(--surface) 82%,transparent) 0,color-mix(in srgb,var(--surface) 82%,transparent) 48px,color-mix(in srgb,var(--surface) 40%,transparent) 76px,transparent),
-  linear-gradient(15deg,var(--surface) 10%,color-mix(in srgb,var(--surface) 45%,transparent) 62%,transparent)}
-.track-ph{border:1.5px dashed var(--line);border-radius:var(--r-row)}
-
-/* a tile opened large */
-.focus-shade{position:fixed;inset:0;z-index:60;background:var(--scrim);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);animation:fadein .2s ease}
-.track.focused{position:fixed;z-index:61;left:50%;top:50%;transform:translate(-50%,-50%);width:min(760px,calc(100vw - 32px));max-height:calc(100vh - 48px);
-  overflow:auto;padding:var(--s5);box-shadow:0 30px 80px -20px var(--shadow);animation:pop .22s ease;cursor:default;background:var(--surface);border-color:var(--ctl)}
-/* The corner of an opened tile closes it — that is where everyone reaches for "close".
-   Removing the sound lives at the other end of the row. */
-.tclose{display:none}
-.track.focused{padding-top:var(--s7)}
-.track.focused .tclose{display:inline-flex;align-items:center;gap:var(--s2);height:32px;padding:0 var(--s3);
-  position:absolute;top:var(--s4);right:var(--s4);z-index:3;
-  border:1px solid var(--ctl);background:var(--surface);border-radius:var(--r-ctl);color:var(--text);font-size:13px;font-weight:600}
-.track.focused .tclose:hover{background:var(--raise);border-color:var(--text)}
-@keyframes pop{from{opacity:0;transform:translate(-50%,-48%) scale(.97)}}
-@keyframes fadein{from{opacity:0}}
-
-/* ---------- library ---------- */
-.lib{position:sticky;top:84px;max-height:calc(100vh - 104px);display:flex;flex-direction:column;padding:var(--s4)}
-.lib>.seg{margin-bottom:var(--s3);flex:none}
-.pane{display:flex;flex-direction:column;min-height:0;flex:1}
-.lib-head{display:flex;align-items:center;gap:var(--s2);margin-bottom:var(--s2)}
-.lib-head .search{margin:0}
-.lib-head .icon{height:40px;min-width:40px;border-radius:var(--r-sm)}
-.libList{overflow:auto;flex:1;min-height:80px;margin:var(--s2) 0 0;display:flex;flex-direction:column;gap:var(--s1)}
-.libList>*{flex:none}   /* rows never squash: the list scrolls */
-.lib-item{display:flex;align-items:center;gap:var(--s3);min-height:56px;padding:var(--s2);border-radius:var(--r-sm);position:relative;overflow:hidden}
-.lib-item:hover{background:var(--raise)}
-.lib-item>*:not(.libg){position:relative;z-index:1}
-.lib-item .icon.rm,.lib-item a.icon{border-color:transparent;background:transparent}
-/* a picture stays in the right third, where no text is */
-.lib-item.has-img{min-height:62px;box-shadow:inset 0 0 0 1px var(--line)}
-/* over a picture a button sits on its own plate, so its edge is never read against the photograph */
-.lib-item.has-img .icon{background:color-mix(in srgb,var(--surface) 94%,transparent);border-color:var(--ctl);
-  box-shadow:0 0 0 2px var(--surface);
-  -webkit-backdrop-filter:blur(10px) saturate(1.2);backdrop-filter:blur(10px) saturate(1.2);color:var(--text)}
-.lib-item.has-img .icon.on{background:var(--glow);border-color:var(--glow-rim);color:var(--on-glow)}
-.libg{position:absolute;inset:0;z-index:0;background-size:cover;background-position:center;opacity:.7;transition:opacity .35s,filter .35s}
-.libg::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,var(--surface) 0%,var(--surface) 46%,color-mix(in srgb,var(--surface) 72%,transparent) 68%,color-mix(in srgb,var(--surface) 25%,transparent) 100%)}
-.lib-item.has-img:hover .libg{opacity:1;filter:brightness(1.08) saturate(1.05)}
-.lib-group{font-size:12px;font-weight:600;color:var(--text2);margin:var(--s4) 0 var(--s1);letter-spacing:.04em;text-transform:uppercase}
-.lib-group:first-child{margin-top:var(--s1)}
-.lib-group small{display:block;text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted);font-size:12px;margin-top:2px}
-.li-name{flex:1;min-width:0;font-size:14px;line-height:1.35}
-.li-name > span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
-.li-name small{display:block;color:var(--text2);font-size:12px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.lic{font-weight:600;color:var(--text)}
-.drop{display:block;border:1.5px dashed var(--ctl);border-radius:var(--r-sm);padding:var(--s3);text-align:center;color:var(--text2);font-size:13px;
-  margin-top:var(--s3);cursor:pointer;transition:background .12s,border-color .12s,color .12s}
-.drop small{font-size:12px}
-.drop:hover,.drop.over{border-color:var(--text);background:var(--raise);color:var(--text)}
-.small{font-size:13px;color:var(--text2);margin:var(--s1) 0 var(--s3);line-height:1.55}
-.small a{color:var(--text);text-underline-offset:3px}
-.steps{margin:0 0 var(--s3);padding-left:20px;font-size:13px;color:var(--text2);line-height:1.6}
-.steps li{margin-bottom:var(--s1)}
-#fsKeyBox .primary{align-self:flex-start;margin-top:var(--s3)}
-.fs-filters{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2);margin:var(--s2) 0 2px}
-.fs-filters select{min-width:0;width:100%;font-size:13px}
-.fs-filters .full{grid-column:1/-1}
-#fsMore{align-self:flex-start;margin-top:var(--s3)}
-.fs-search{display:flex;gap:var(--s2)}
-.linkbtn{border:0;background:transparent;color:var(--text2);font-size:13px;padding:var(--s3) 2px 0;align-self:flex-start;text-decoration:underline;text-underline-offset:3px}
-.linkbtn:hover{color:var(--text)}
+.list.sorting .track{transition:transform .26s var(--ease)}
+.list.sorting .track.shift{transform:translateY(10px)}
+.list.sorting .track.shift-up{transform:translateY(-4px)}
+/* where a dragged sound will land: an ink line, not gold */
+.track.drop-before{box-shadow:0 -2px 0 0 var(--ink)}
+.track.drop-after{box-shadow:0 2px 0 0 var(--ink)}
 
 /* ---------- export ---------- */
-.export{margin-top:var(--s6)}
-.export p{margin:var(--s2) 0 var(--s4);color:var(--text2);font-size:14px}
+.export{margin-top:var(--s5);padding:var(--s5) var(--s5) var(--s5)}
+.export h2{font:400 24px/1.25 var(--serif)}
+.export p{margin:var(--s2) 0 var(--s4);color:var(--ink2);font-size:14px;max-width:70ch}
 .export .row{gap:var(--s3)}
-.ex-prog{flex:1;min-width:120px;height:4px;border-radius:4px;background:var(--line);overflow:hidden}
-.ex-prog i{display:block;height:100%;width:40%;border-radius:4px;background:var(--text);animation:slide 1.4s ease-in-out infinite}
-@keyframes slide{0%{transform:translateX(-110%)}100%{transform:translateX(260%)}}
+.ex-busy,.ex-status{margin-top:var(--s3)}
+.ex-status:empty{display:none}
+.ex-prog{flex:1;min-width:120px;height:2px;border-radius:var(--r-print);background:var(--rule);overflow:hidden}
+.ex-prog i{display:block;height:100%;width:40%;border-radius:var(--r-print);background:var(--ink2);animation:sweep 1.5s var(--ease) infinite}
+
+/* ---------- your sounds: a panel that opens from "Add a sound" ----------
+   It docks beside the tracklist and pushes it aside, so every line you are building, the one you just
+   added included, keeps its volume and its drawer in view. It stays while you add one sound after
+   another and while you set them; it closes when you press play, press Escape or close it.
+   It stays in view as you scroll, under the pinned play bar. */
+.libp{grid-column:2;grid-row:1/span 2;position:sticky;top:calc(var(--tp-h,80px) + var(--s4));z-index:4;
+  height:min(640px,calc(100vh - var(--tp-h,80px) - var(--s4) * 2));min-height:360px;display:flex;flex-direction:column;padding:var(--s4);
+  animation:lib-in var(--t-panel) var(--ease)}
+@keyframes lib-in{from{opacity:0;transform:translateX(8px)}}
+.ed-main:has(>.libp:not([hidden])){grid-template-columns:minmax(0,1fr) clamp(300px,30vw,400px);column-gap:var(--s5)}
+.libp-top{display:flex;align-items:center;gap:var(--s2);margin-bottom:var(--s3);flex:none}
+.libp-top .seg{flex:1}
+.libp-top .icon{height:40px;min-width:40px;border-color:transparent;border-radius:var(--r-sm)}
+.pane{display:flex;flex-direction:column;min-height:0;flex:1}
+.lib-head{display:flex;align-items:center;gap:var(--s2)}
+.lib-head .icon{height:40px;min-width:40px;border-radius:var(--r-sm)}
+.libList{overflow:auto;flex:1;min-height:80px;margin:var(--s2) calc(var(--s2) * -1) 0;padding:0 var(--s2);display:flex;flex-direction:column}
+.libList>*{flex:none}
+.lib-group{font-size:13px;font-weight:600;color:var(--ink2);margin:var(--s4) 0 var(--s1)}
+.lib-group:first-child{margin-top:var(--s2)}
+.lib-group small{display:block;font-weight:400;color:var(--mute);font-size:12px;margin-top:var(--s1)}
+.lib-item{display:flex;align-items:center;gap:var(--s3);min-height:56px;padding:var(--s2) 0;border-bottom:1px solid var(--rule);position:relative;transition:background var(--t-state)}
+.lib-item:hover{background:linear-gradient(90deg,transparent,var(--hover) 20%,var(--hover) 80%,transparent);--mute:var(--mute-lit)}
+.lib-item .pic{width:32px;height:32px}
+.li-name{flex:1;min-width:0;font-size:14px;line-height:1.35;color:var(--ink)}
+.li-name>span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+.li-name small{display:block;color:var(--mute);font-size:12px;margin-top:var(--s1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lic{color:var(--ink2)}
+.add{flex:none;height:32px;padding:0 var(--s3);border:1px solid var(--line);border-radius:var(--r-ctl);background:transparent;color:var(--ink);font-size:13px;
+  display:inline-flex;align-items:center;gap:var(--s2);transition:border-color var(--t-state),background var(--t-state)}
+.add:hover:not(:disabled){border-color:var(--ink2);background:var(--hover)}
+.add:disabled{color:var(--mute);cursor:progress}
+.add svg{width:14px;height:14px}
+.lib-item .icon.rm,.lib-item a.icon{border-color:transparent;color:var(--mute);width:32px;min-width:32px;height:32px}
+.lib-item .icon.rm:hover{color:var(--ember);border-color:transparent;background:var(--ember-tint)}
+.lib-item a.icon:hover{color:var(--ink);border-color:transparent;background:var(--hover-strong)}
+.drop{display:block;flex:none;border:1px dashed var(--line);border-radius:var(--r-sm);padding:var(--s2) var(--s3);text-align:center;color:var(--ink2);font-size:13px;
+  margin-top:var(--s3);cursor:pointer;transition:background var(--t-state),border-color var(--t-state),color var(--t-state)}
+.drop small{font-size:12px;color:var(--mute)}
+.drop:hover,.drop.over{border-color:var(--ink2);background:var(--hover);color:var(--ink)}
+/* nothing yet: the gentle way in */
+.lib-empty{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s3);padding:var(--s4) 0}
+.lib-empty p{margin:0;font-size:14px;line-height:1.55;color:var(--ink2);text-wrap:pretty}
+.try{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2);padding:var(--s4) 0}
+.try p{flex-basis:100%;margin:0;font-size:13px;line-height:1.55;color:var(--ink2);text-wrap:pretty}
+.try button{height:32px;padding:0 var(--s3);border:1px solid var(--line);border-radius:var(--r-pill);background:transparent;color:var(--ink);font-size:13px;
+  transition:border-color var(--t-state),background var(--t-state)}
+.try button:hover{border-color:var(--ink2);background:var(--hover)}
+.small{font-size:13px;color:var(--ink2);margin:0 0 var(--s3);line-height:1.55}
+.small a,.steps a{color:var(--ink);text-underline-offset:3px}
+.steps{margin:0 0 var(--s3);padding-left:var(--s4);font-size:13px;color:var(--ink2);line-height:1.6}
+.steps li{margin-bottom:var(--s1)}
+.fs-key .primary{align-self:flex-start;margin-top:var(--s3)}
+.fs-key-cancel{align-self:flex-start;margin-top:var(--s2)}
+.fs-filters{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2);margin:var(--s2) 0 0}
+.fs-filters select{width:100%}
+.fs-filters .full{grid-column:1/-1}
+.fs-more{align-self:flex-start;margin-top:var(--s3)}
+.fs-search{display:flex;gap:var(--s2)}
+.linkbtn{border:0;background:transparent;color:var(--ink2);font-size:13px;padding:var(--s3) 0 0;align-self:flex-start;text-decoration:underline;text-underline-offset:3px}
+.linkbtn:hover{color:var(--ink)}
 
 /* ---------- the app's own dialog, in place of the browser's grey box ---------- */
 .scrim{position:fixed;inset:0;z-index:80;background:var(--scrim);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
-  display:grid;place-items:center;padding:var(--s5);animation:fadein .16s ease}
-.dlg{width:min(520px,100%);max-height:calc(100vh - 48px);overflow:auto;background:var(--surface);border:1px solid var(--ctl);border-radius:var(--r-panel);
-  padding:var(--s5);box-shadow:0 30px 80px -20px var(--shadow);animation:rise .16s ease-out;container-type:inline-size}
-@keyframes rise{from{opacity:0;transform:translateY(8px)}}
-.dlg h2{font-size:26px;line-height:1.25;margin-bottom:var(--s3)}
-.dlg p{margin:0 0 var(--s3);font-size:14px;color:var(--text2);line-height:1.55}
-.dlg .files{background:var(--raise);border-radius:var(--r-sm);padding:var(--s3) var(--s4);margin:0 0 var(--s3)}
-.dlg .files div{display:flex;align-items:center;gap:var(--s2);font-size:13px;font-weight:600;color:var(--text);padding:3px 0}
-.dlg .files svg{width:16px;height:16px;color:var(--text2);flex:none}
-.dlg .danger-line{display:flex;gap:var(--s2);align-items:flex-start;color:var(--warn);font-size:13px;font-weight:500;margin-bottom:var(--s4)}
-.dlg .danger-line svg{width:18px;height:18px;flex:none;margin-top:1px}
-.dlg .acts{display:flex;gap:var(--s3);align-items:center;flex-wrap:wrap}
-/* the spacer keeps clear space between the way out and the button that cannot be undone */
+  display:grid;place-items:center;padding:var(--s5);animation:fadein .2s var(--ease)}
+.dlg{width:min(520px,100%);max-height:calc(100vh - 48px);overflow:auto;background:var(--grain),var(--card);border:1px solid var(--line);border-radius:var(--r-print);
+  padding:var(--s6);box-shadow:0 40px 90px -30px #000;animation:rise .24s var(--ease);container-type:inline-size}
+@keyframes rise{from{opacity:0;transform:translateY(8px) scale(.985)}}
+@keyframes fadein{from{opacity:0}}
+.dlg h2{font:italic 400 26px/1.25 var(--serif);margin-bottom:var(--s3);text-wrap:balance}
+.dlg p{margin:0 0 var(--s3);font-size:14px;color:var(--ink2);line-height:1.55}
+.dlg .files{display:grid;gap:var(--s2);background:var(--field);border:1px solid var(--rule);border-radius:var(--r-sm);padding:var(--s3) var(--s4);margin:0 0 var(--s3)}
+.dlg .files div{display:flex;align-items:center;gap:var(--s2);font-size:13px;color:var(--ink)}
+.dlg .files svg{color:var(--mute)}
+.dlg .danger-line{display:flex;gap:var(--s2);align-items:flex-start;color:var(--ember-ink);font-size:13px;margin-bottom:var(--s5)}
+/* the sign is as tall as the first line of words, so it sits centred on it without a nudge */
+.dlg .danger-line svg{width:16px;height:1lh;flex:none;color:var(--ember)}
+.dlg .acts{display:flex;gap:var(--s3);align-items:center;flex-wrap:wrap;margin-top:var(--s5);justify-content:flex-start}
 .dlg .acts .spacer{flex:1;min-width:var(--s5)}
-/* too narrow for one row: one button per row, full width, the destructive one last */
 @container (max-width:459px){
   .dlg .acts{flex-direction:column;align-items:stretch}
   .dlg .acts .spacer{display:none}
 }
 
-/* thin scrollbars */
-::-webkit-scrollbar{width:8px;height:8px}
+/* thin scrollbars, in the palette */
+::-webkit-scrollbar{width:10px;height:10px}
 ::-webkit-scrollbar-track,::-webkit-scrollbar-corner{background:transparent}
-::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--muted) 45%,transparent);border-radius:8px;border:2px solid transparent;background-clip:padding-box}
-::-webkit-scrollbar-thumb:hover{background:var(--muted);background-clip:padding-box}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:var(--r-pill);border:3px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-thumb:hover{background:var(--mute);background-clip:padding-box}
 ::-webkit-scrollbar-button{display:none;width:0;height:0}
-@supports not selector(::-webkit-scrollbar){
-  *{scrollbar-width:thin;scrollbar-color:var(--line) transparent}
-}
+@supports not selector(::-webkit-scrollbar){*{scrollbar-width:thin;scrollbar-color:var(--line) transparent}}
 
-/* ---------- immersion mode ---------- */
-.imm{--fx-pad:26px;position:fixed;inset:0;z-index:50;background:#070a15;color:#fff;overflow:hidden;opacity:0;transition:opacity .7s ease}
+/* ---------- immersion: the caption ----------
+   The picture fills the window; the shade is local, under the caption. The stars stay behind the
+   picture, the weather passes over it. At rest the controls fade almost to nothing, never away. */
+.imm{--fx-pad:var(--s5);position:fixed;inset:0;z-index:50;background:#0c0a0e;color:var(--ink);overflow:hidden;opacity:0;transition:opacity .8s var(--ease)}
 .imm.show{opacity:1}
-.imm-empty{position:absolute;inset:0;background:radial-gradient(120% 90% at 78% 112%,#3a2b4e 0%,#1c2040 40%,#0b0f1e 78%)}
-.imm-blur{position:absolute;inset:-6%;width:112%;height:112%;object-fit:cover;filter:blur(36px) brightness(.55) saturate(1.1);display:block}
-.imm-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;image-rendering:auto}
-.imm-bg.fill{object-fit:cover;scale:1.04}
-/* parallax: the blurred backdrop, the picture and the falling lights each shift by a different amount with the pointer */
-.imm-blur,.imm-bg,.imm canvas{transition:translate 1.6s cubic-bezier(.16,.84,.3,1)}
-.imm-blur{translate:calc(var(--px,0) * -5px) calc(var(--py,0) * -5px)}
-.imm-bg{translate:calc(var(--px,0) * -11px) calc(var(--py,0) * -11px)}
-.imm canvas{translate:calc(var(--px,0) * -1 * var(--fx-pad)) calc(var(--py,0) * -1 * var(--fx-pad))}
+.imm-slot{display:contents}
+.imm-empty{position:absolute;inset:0;background:radial-gradient(110% 80% at 20% 0%,var(--plum) 0%,#161320 46%,#0c0a0e 80%)}
+.imm-blur{position:absolute;inset:-6%;width:112%;height:112%;object-fit:cover;filter:blur(40px) brightness(.45) saturate(1.1);display:block}
+.imm-stars{position:absolute;inset:-6%}
+.imm-stars .far{background-image:var(--stars-far);background-size:var(--stars-far-size,900px 700px);opacity:.8;animation:drift-far 320s linear infinite alternate}
+.imm-stars .near{background-image:var(--stars-near);background-size:var(--stars-near-size,1300px 1000px);animation:drift-near 150s linear infinite alternate}
+.imm-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;image-rendering:auto;filter:drop-shadow(0 30px 60px rgba(0,0,0,.5))}
+.imm-bg.fill{object-fit:cover;scale:1.04;filter:none}
 .imm-bg.pixel{image-rendering:pixelated}
-.imm-shade{position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(0,0,0,.3) 0%,rgba(0,0,0,.64) 100%);transition:background .4s}
-/* a pale picture needs a deeper scrim, or the title and the play button disappear into it */
-.imm.pale .imm-shade{background:radial-gradient(ellipse at center,rgba(0,0,0,.45) 0%,rgba(0,0,0,.72) 100%)}
-/* the effect is drawn a parallax-width beyond every edge, so moving with the pointer never uncovers one */
-.imm canvas{position:absolute;top:calc(-1 * var(--fx-pad));left:calc(-1 * var(--fx-pad));width:calc(100% + 2 * var(--fx-pad));height:calc(100% + 2 * var(--fx-pad));pointer-events:none}
-/* while immersion is open the page underneath does not scroll, so no scrollbar is drawn beside it */
+/* parallax: the backdrop, the stars, the picture and the weather each shift by a different amount with the pointer */
+.imm-blur,.imm-bg,.imm canvas,.imm-stars{transition:translate 1.6s cubic-bezier(.16,.84,.3,1)}
+.imm-blur{translate:calc(var(--px,0) * -4px) calc(var(--py,0) * -4px)}
+.imm-stars{translate:calc(var(--px,0) * -8px) calc(var(--py,0) * -8px)}
+.imm-bg{translate:calc(var(--px,0) * -12px) calc(var(--py,0) * -12px)}
+.imm canvas{position:absolute;top:calc(-1 * var(--fx-pad));left:calc(-1 * var(--fx-pad));width:calc(100% + 2 * var(--fx-pad));height:calc(100% + 2 * var(--fx-pad));pointer-events:none;
+  translate:calc(var(--px,0) * -1 * var(--fx-pad)) calc(var(--py,0) * -1 * var(--fx-pad))}
+.imm-shade{position:absolute;left:0;right:0;bottom:0;height:min(420px,60vh);pointer-events:none;
+  background:linear-gradient(180deg,rgba(18,16,20,0),rgba(18,16,20,.62) 50%,rgba(18,16,20,.9))}
+.imm.pale .imm-shade{background:linear-gradient(180deg,rgba(18,16,20,0),rgba(18,16,20,.78) 45%,rgba(18,16,20,.94))}
 html.imm-lock{overflow:hidden}
-.imm-center{position:absolute;inset:0;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px}
-.imm-center>*{pointer-events:auto}
-.imm-title{margin:0;font-family:var(--display);font-style:italic;font-size:clamp(30px,4.8vw,60px);font-weight:300;letter-spacing:-.015em;line-height:1.1;color:#fff;text-align:center;padding:0 24px;
-  text-shadow:0 2px 30px rgba(0,0,0,.55);text-wrap:balance}
-.imm-play{width:88px;height:88px;border-radius:50%;border:1.5px solid rgba(255,255,255,.7);background:rgba(0,0,0,.25);
-  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);color:#fff;display:grid;place-items:center;transition:transform .12s,background .2s}
-.imm-play:hover{background:rgba(255,255,255,.2);transform:scale(1.04)}
-.imm-play:active{transform:scale(.97)}
-.imm-play svg{width:28px;height:28px}
-input[type=range].imm-vol{width:220px;--fill:#fff;--rail:rgba(255,255,255,.55)}
-input[type=range].imm-vol::-webkit-slider-runnable-track{height:3px}
-input[type=range].imm-vol::-moz-range-track{height:3px}
-input[type=range].imm-vol::-webkit-slider-thumb{width:14px;height:14px;border:0;background:#fff;margin-top:-5.5px;box-shadow:0 0 12px rgba(0,0,0,.5)}
-input[type=range].imm-vol::-moz-range-thumb{width:14px;height:14px;border:0;background:#fff}
-.imm-top{position:absolute;z-index:3;top:20px;left:20px;right:20px;display:flex;align-items:flex-start;gap:var(--s4)}
-.fx-chips{display:inline-flex;gap:2px;padding:3px;border-radius:999px;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.28);
-  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);flex-wrap:wrap;margin-right:auto}
-.imm-set{display:flex;gap:var(--s2);flex-wrap:wrap;justify-content:flex-end}
-.imm-btn{display:inline-flex;align-items:center;gap:var(--s2);border:1px solid rgba(255,255,255,.45);background:rgba(0,0,0,.35);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
-  color:#fff;border-radius:999px;padding:0 var(--s3);font-size:13px;font-weight:600;height:34px;transition:background .12s,color .12s}
-.imm-btn:hover{background:rgba(255,255,255,.16)}
+/* top right: the way out, alone */
+.imm-btn{display:inline-flex;align-items:center;gap:var(--s2);height:40px;padding:0 var(--s4);border:0;border-radius:var(--r-pill);
+  background:rgba(18,16,20,.72);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:var(--ink);font-size:13px;font-weight:500;
+  transition:background var(--t-state),color var(--t-state),opacity .9s var(--ease)}
+.imm-btn:hover{background:rgba(29,26,33,.92)}
 .imm-btn:active{transform:translateY(1px)}
-.imm-btn.on{background:#fff;color:#0d1222;border-color:transparent}
-.imm-btn svg{width:16px;height:16px}
-.fx-chips .imm-btn{border:0;background:transparent;height:30px}
-.fx-chips .imm-btn:hover{background:rgba(255,255,255,.16)}
-.fx-chips .imm-btn.on{background:#fff;color:#0d1222}
-/* the way out is always alone, in the corner, round */
-.imm-close{width:40px;height:40px;flex:none;padding:0;border-radius:50%;justify-content:center;margin-left:var(--s2)}
-.imm-btn:focus-visible,.imm-play:focus-visible,.imm-vol:focus-visible{outline-color:#fff}
-.imm-fade{transition:opacity .9s ease}
-.imm.idle .imm-fade{opacity:0;pointer-events:none}
+.imm-btn[aria-expanded="true"]{background:var(--card)}
+.imm-btn .chev{width:14px;height:14px;transition:rotate var(--t-panel) var(--ease)}
+.imm-btn[aria-expanded="true"] .chev{rotate:180deg}
+.imm-close{position:absolute;z-index:3;top:var(--s5);right:var(--s6)}
+/* bottom left: the caption, what is playing and how loud */
+.imm-caption{position:absolute;z-index:3;left:var(--s8);bottom:var(--s7);display:flex;flex-direction:column;gap:var(--s2);max-width:min(760px,calc(100% - 128px))}
+.imm-title{font:italic 400 clamp(36px,4.4vw,60px)/1.08 var(--serif);letter-spacing:-.01em;color:var(--ink);text-shadow:0 2px 30px rgba(0,0,0,.5);text-wrap:balance}
+.imm-title span{position:relative}
+.imm-title span::after{content:"";position:absolute;left:-2px;right:-10px;bottom:-4px;height:2px;border-radius:var(--r-print);
+  background:linear-gradient(90deg,rgba(216,168,69,0),var(--gold) 12%,var(--gold-hi) 70%,rgba(216,168,69,0));box-shadow:0 0 12px rgba(216,168,69,.65);
+  transform-origin:left;transform:rotate(-.6deg) scaleX(0);opacity:0;transition:transform 1s var(--ease),opacity .6s var(--ease)}
+.imm.playing .imm-title span::after{transform:rotate(-.6deg) scaleX(1);opacity:1}
+.imm-desc{font:400 22px/1.35 var(--serif);color:var(--ink);text-shadow:0 1px 18px rgba(0,0,0,.6);max-width:56ch;text-wrap:pretty}
+.imm-desc:empty{display:none}
+.imm-transport{display:flex;align-items:center;gap:var(--s5);margin-top:var(--s4)}
+.imm-vol-l{display:flex;align-items:center;gap:var(--s3);color:var(--ink2);font-size:13px}
+.imm-vol-l input{width:200px}
+input[type=range].imm-vol{--fill:var(--ink);--rail:rgba(233,228,218,.3)}
+input[type=range].imm-vol::-webkit-slider-thumb{box-shadow:0 0 12px rgba(0,0,0,.5)}
+/* bottom right: the scene, on one shared plate */
+.imm-scene{position:absolute;z-index:3;right:var(--s6);bottom:var(--s7);display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap;justify-content:flex-end;max-width:calc(100% - 64px)}
+.plate{display:flex;align-items:center;gap:var(--s1);padding:var(--s1);border-radius:var(--r-pill);background:rgba(18,16,20,.72);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.plate .k{color:var(--ink2);font-size:13px;padding:0 var(--s2) 0 var(--s3)}
+.fx-chips{display:flex;gap:var(--s1);flex-wrap:wrap}
+.fx-chips button{height:32px;padding:0 var(--s3);border-radius:var(--r-pill);border:0;background:transparent;color:var(--ink2);font-size:13px;transition:background var(--t-state),color var(--t-state)}
+.fx-chips button:hover{background:var(--hover-strong)}
+.fx-chips button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.imm-menu{position:relative}
+.imm-set{position:absolute;right:0;bottom:calc(100% + var(--s2));min-width:232px;display:flex;flex-direction:column;padding:var(--s1);border-radius:var(--r-card);
+  background:rgba(29,26,33,.96);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);box-shadow:0 20px 50px -20px #000;animation:pop-menu .18s var(--ease)}
+.imm-opt{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);height:36px;padding:0 var(--s3);border:0;border-radius:var(--r-ctl);background:transparent;color:var(--ink);font-size:13px;text-align:left}
+.imm-opt:hover{background:var(--hover-strong)}
+.imm-opt[aria-pressed="true"]::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--ink)}
+.imm-btn:focus-visible,.imm-opt:focus-visible,.fx-chips button:focus-visible,.imm-play:focus-visible{outline-color:#fff}
+.imm-fade{transition:opacity .9s var(--ease)}
+/* at rest: the controls fade almost to nothing, never away; the caption's words stay */
+.imm.idle .imm-fade{opacity:.12}
+.imm.idle .imm-desc{opacity:.75;transition:opacity .9s var(--ease)}
 .imm.idle{cursor:none}
 
-/* The message at the bottom of the window: 40 px high, text on a 20 px line, the same padding on both
-   sides. The edge is drawn inside the pill (an inset shadow, not a border), so an action button sits
-   4 px from the top, the bottom and the end alike. */
-.toast{position:fixed;left:50%;bottom:26px;translate:-50% 0;transform-origin:50% 100%;height:40px;
-  background:var(--surface);color:var(--text);display:flex;align-items:center;gap:var(--s2);padding:0 var(--s4);
-  border-radius:999px;font-size:14px;font-weight:500;line-height:20px;visibility:hidden;opacity:0;
-  pointer-events:none;z-index:70;box-shadow:inset 0 0 0 1px var(--ctl),0 14px 30px -14px var(--shadow);max-width:calc(100vw - 32px)}
-.toast.show{visibility:visible;opacity:1;animation:toast-in .2s cubic-bezier(.2,.7,.3,1)}
-.toast.leave{visibility:visible;animation:toast-out .16s ease-in forwards}
+/* ---------- a message at the bottom of the window ---------- */
+.toast{position:fixed;left:50%;bottom:var(--s5);translate:-50% 0;transform-origin:50% 100%;min-height:40px;
+  background:var(--card);color:var(--ink);display:flex;align-items:center;gap:var(--s2);padding:var(--s2) var(--s4);
+  border-radius:var(--r-pill);font-size:14px;line-height:20px;visibility:hidden;opacity:0;
+  pointer-events:none;z-index:70;box-shadow:inset 0 0 0 1px var(--line),0 18px 40px -16px var(--shadow);max-width:calc(100vw - 32px)}
+.toast.show{visibility:visible;opacity:1;animation:toast-in .24s var(--ease)}
+.toast.leave{visibility:visible;animation:toast-out .18s var(--ease-in) forwards}
 @keyframes toast-in{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
 @keyframes toast-out{from{opacity:1;transform:none}to{opacity:0;transform:translateY(4px)}}
-.toast.has-act{pointer-events:auto;padding-right:var(--s1)}
+.toast.has-act{pointer-events:auto;padding-top:var(--s1);padding-bottom:var(--s1);padding-right:var(--s1)}
 .toast.has-act.leave{pointer-events:none}
-.toast .t-ico{flex:none;display:flex;width:16px;height:16px}
-.toast .t-ico svg{width:16px;height:16px}
-.toast[data-kind="done"] .t-ico{color:var(--glow)}
-.toast[data-kind="info"] .t-ico{color:var(--text2)}
-.toast[data-kind="warn"] .t-ico{color:var(--warn)}
+.toast .t-ico{flex:none;display:flex}
+.toast[data-kind="done"] .t-ico{color:var(--saved)}
+.toast[data-kind="info"] .t-ico{color:var(--ink2)}
+.toast[data-kind="warn"] .t-ico{color:var(--ember)}
 .toast .t-msg{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.toast .t-act{flex:none;height:32px;padding:0 var(--s3);border-radius:999px;border:1px solid var(--ctl);background:var(--raise);color:var(--text);font-size:13px;font-weight:600}
+.toast .t-act{flex:none;height:32px;padding:0 var(--s3);border-radius:var(--r-pill);border:0;background:var(--rule);color:var(--ink);font-size:13px;font-weight:600}
 .toast .t-act:hover{background:var(--line)}
 
+/* ---------- narrower windows ----------
+   Half a screen (720–960) is a primary width: a sound stays on one line down to 640. */
+/* the transport keeps one line: below 1200px Immersion and Export fold into one "More" menu */
+.more-go{display:none}
+@media (max-width:1200px){
+  .imm-go,.ex-go{display:none}
+  .more-go{display:inline-flex}
+}
 @media (max-width:1100px){
   .wrap,.foot{padding-left:var(--s5);padding-right:var(--s5)}
 }
-@media (max-width:900px){
-  .ed-grid{grid-template-columns:minmax(0,1fr)}
-  .lib{position:static;max-height:none}
-  .libList{max-height:340px}
-  .h1,.title{font-size:36px;line-height:1.28}
+@media (max-width:960px){
+  .tmain{gap:var(--s4)}
+  /* the volume gives way first: its rail shortens (never below 80px) before anything leaves the line */
+  .master{flex:1 1 180px;min-width:0;max-width:320px}
+  .master input{width:auto;flex:1 1 0;min-width:96px;max-width:200px}
+  .clockbox{min-width:64px}
+  .save-plate{min-width:200px}
+  .insert{grid-template-columns:120px 32px minmax(0,1fr)}
+  .cover-wrap{min-height:120px}
+  .c-acts{width:auto}
+  .c-when{width:auto}
 }
-@media (max-width:620px){
-  .wrap{padding:var(--s5) var(--s4) 80px}
+/* half of a laptop screen: the play bar's spaces close up a step so it still keeps one line */
+@media (max-width:800px){
+  .tmain{gap:var(--s3)}
+  .clockbox{min-width:56px}
+  .master input{min-width:80px}
+}
+/* a wide list: the volume gets a longer rail, finer to set, and the name keeps its measure */
+@container tracks (min-width:1100px){
+  .tracks>*{--vol-w:172px}
+}
+/* the tracklist answers to its own width: half a screen, or a full one with "Your sounds" docked beside it.
+   There the drawer is one column: the sound's own settings side by side, the table of effects under them */
+@container tracks (max-width:1099px){
+  .fx-body{grid-template-columns:minmax(0,1fr)}
+  /* how it plays is a strip across the drawer: its height changes with the way of playing, and there it has no
+     neighbour to leave a hole beside. Which side and the picture share the line under it, the picture as tall as the listener */
+  .fx-own{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-right:0;border-bottom:1px solid var(--rule)}
+  .fx-how{grid-column:1/-1}
+  .fx-how>select{flex:0 0 240px;width:240px}
+  .fx-how .opts:has(input[type=number]){flex:0 0 auto}
+  .fx-how .opts:has(input[type=range]){flex:0 1 220px}
+  .fx-pic{border-left:1px solid var(--rule)}
+  .pic-row{flex:1;align-items:stretch}
+  .pthumb{width:auto;height:auto;min-height:44px;max-height:128px;aspect-ratio:1}
+}
+@container tracks (max-width:912px){
+  .tracks>*{--pad:var(--s4);--vol-w:96px}
+  .fx-row{grid-template-columns:96px 272px minmax(0,1fr);column-gap:var(--s3)}
+  .fx-amt{width:272px}
+}
+/* a narrow list: a sound becomes two lines, who it is, then how loud and what is inside */
+@container tracks (max-width:608px){
+  .tl-head .find{flex:1 1 auto}
+  .trow{grid-template-columns:28px 49px minmax(0,1fr) auto auto;grid-template-areas:"n p nm nm nm" ". vol vol only op";row-gap:var(--s2);padding-block:var(--s3)}
+  .trow>.grip{grid-area:n}.trow>.pic{grid-area:p}.trow>.nmcol{grid-area:nm}.trow>.volw{grid-area:vol}.trow>.only{grid-area:only}.trow>.opener{grid-area:op}
+  .trow>.warn{grid-column:3/-1}
+  .volw .vol{flex:1 1 64px;width:auto}
+  .fx-own{display:flex;flex-direction:column}
+  .fx-how>select{flex:0 0 100%;width:100%}
+  .fx-how .opts:has(input[type=number]){flex:0 0 100%}
+  .fx-how .opts:has(input[type=range]){flex:1 1 104px}
+  .fx-pic{border-left:0}
+  .pic-row{flex:none;align-items:flex-start}
+  .pthumb{width:44px;height:44px;aspect-ratio:auto}
+  .fx-row{grid-template-columns:minmax(0,1fr);row-gap:var(--s2);padding-block:var(--s3)}
+  .fx-amt{width:100%}
+}
+/* too narrow to dock: "Your sounds" is a sheet of its own across the foot of the window, framed by its own
+   printed rule and never boxed inside the list. The page gains room under the list for as long as it is open,
+   so any line can be scrolled up above the sheet and set while you keep adding */
+@media (max-width:759px){
+  .ed-main{--sheet-h:min(56vh,520px)}
+  .ed-main:has(>.libp:not([hidden])){grid-template-columns:minmax(0,1fr);padding-bottom:var(--sheet-h)}
+  .ed-main:has(>.libp:not([hidden])) .track{scroll-margin-bottom:calc(var(--sheet-h) + var(--s4));scroll-margin-top:calc(var(--tp-h,80px) + var(--s4))}
+  .libp{position:fixed;z-index:30;left:0;right:0;bottom:0;top:auto;width:auto;grid-column:auto;grid-row:auto;height:var(--sheet-h);min-height:0;
+    padding:var(--s4) var(--s5) calc(var(--s4) + env(safe-area-inset-bottom,0px));border:0;border-top:1px solid var(--line);border-radius:0;
+    box-shadow:0 -24px 60px -24px #000;animation:sheet-in var(--t-panel) var(--ease)}
+}
+@keyframes sheet-in{from{transform:translateY(24px);opacity:0}}
+@media (max-width:720px){
+  .cat thead{display:none}
+  .cat tr.comp{display:grid;grid-template-columns:1fr auto;padding:var(--s3) var(--s4);border-bottom:1px solid var(--rule)}
+  .cat td{height:auto;padding:0;border:0}
+  .c-who{grid-column:1/-1}
+  .c-when{font-size:13px;color:var(--mute);padding-left:var(--s8)!important;align-self:center}
+  .c-acts{text-align:right}
+  .a{padding:0 var(--s2)}
+}
+@media (max-width:640px){
+  .wrap{padding:var(--s3) var(--s4) var(--s8)}
   .foot{padding:0 var(--s4) var(--s5)}
-  .grid{grid-template-columns:1fr}
-  .welcome{margin-top:9vh}
-  .bar{margin-bottom:var(--s6)}
-  .ed-head{align-items:flex-start;gap:var(--s4)}
-  .cover-wrap{width:88px;height:88px}
-  .transport{border-radius:var(--r-panel);gap:var(--s3)}
-  .master{order:3;flex-basis:100%}
-  .tbar-end{order:2}
-  .imm-open span{display:none}
-  .imm-open{padding:0 var(--s3)}
-  .save-plate .when{display:none}
-  .list.tiles{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
-  .arch-item{flex-wrap:wrap}
-  .imm-top{flex-wrap:wrap}
-  .fx-chips{order:2;margin-right:0}
-  .imm-set{order:1;flex:1}
+  .welcome{justify-content:flex-start;padding-block:var(--s8) 0}
+  .tagline{font-size:26px}
+  .wsteps{flex-direction:column;align-items:flex-start;margin-inline:auto;width:fit-content;max-width:100%}
+  .wsteps li{text-align:left}
+  .bar{flex-wrap:wrap;height:auto;padding-top:var(--s2)}
+  .folder span{display:none}
+  .h1{font-size:34px}
+  .find{flex-basis:100%}
+  .insert{grid-template-columns:96px minmax(0,1fr)}
+  .spine{display:none}
+  .cover-wrap{min-height:96px}
+  .meta{padding:var(--s4) var(--s4) var(--s6)}
+  .meta{--pad-t:var(--s4);--title-h:40px}
+  .title{font-size:32px}
+  .master{flex:1 1 100%;min-width:0;order:3}
+  .master input{max-width:none}
+  .tbar-end{order:4;flex-basis:100%;justify-content:space-between}
+  .save-plate{min-width:0;padding-left:0}
+  .cover-acts button{padding:0 var(--s1);font-size:12px}
+  .libp{padding-inline:var(--s4)}
+  /* immersion on a phone: the caption above, the weather as one row of choices under its label */
+  .imm-caption{left:var(--s5);bottom:calc(var(--s9) + var(--s8));max-width:calc(100% - var(--s7))}
+  .imm-scene{left:var(--s4);right:var(--s4);bottom:var(--s4);justify-content:flex-start}
+  .plate.weather{flex-direction:column;align-items:flex-start;gap:var(--s1);width:100%;padding:var(--s2) var(--s1) var(--s1);border-radius:var(--r-card)}
+  .plate.weather .k{padding:0 var(--s3)}
+  .fx-chips{flex-wrap:nowrap;max-width:100%;overflow-x:auto;scrollbar-width:none}
+  .fx-chips button{flex:none;padding:0 var(--s2)}
+  .imm-close{right:var(--s4);top:var(--s4)}
 }
 @media (prefers-reduced-motion:reduce){
-  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;animation-delay:0s!important;scroll-behavior:auto!important}
   .sky .depth{transition:none;transform:none!important}
-  .sky i,.sky .mid i,.sky .near i{animation:none}
-  .name{transition:none}
+  .sky .stars,.sky .glow i,.sky .near>i,.imm-stars .stars{animation:none!important}
+  .comet{display:none}
+  .wrap,.foot{transition:none}
+  .ink::after,.imm-title span::after{transition:none}
+  .title,.meta,.rename-in{transition:none;animation:none}
   .seg-pill{transition:none}
-  .track.enter{animation:none}
-  .atmo-pic{transition:none}
-  .tbg{transition:none}
-  .imm-blur,.imm-bg,.imm canvas{translate:none!important}
+  .fxp,.track.is-open>.fxp,.fx-body,.dfoot,.track.is-open .fx-body,.track.is-open .dfoot{transition:none}
+  .imm-play.playing{animation:none}
+  .imm-blur,.imm-bg,.imm canvas,.imm-stars{translate:none!important}
 }

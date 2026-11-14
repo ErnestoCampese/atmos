@@ -7,18 +7,34 @@
    When a new version is published, the page itself is fetched from the network first, so anyone
    who already has the app gets the new one as soon as they are online. */
 
-const VERSION = 'atmos-v15';
+const VERSION = 'atmos-v39';
 const SHELL = [
   './',
   'index.html',
   'css/app.css',
-  'js/app.js',
+  'js/core.js',
+  'js/audio.js',
+  'js/folder.js',
+  'js/home.js',
+  'js/composition.js',
+  'js/tracks.js',
+  'js/library.js',
+  'js/freesound.js',
+  'js/wiring.js',
+  'js/immersion.js',
+  'js/start.js',
   'manifest.webmanifest',
-  'assets/fonts/literata-italic.woff2',
-  'assets/fonts/literata-italic-alpha.woff2',
+  'assets/fonts/alegreya-roman-latin.woff2',
+  'assets/fonts/alegreya-roman-latin-ext.woff2',
+  'assets/fonts/alegreya-roman-greek.woff2',
+  'assets/fonts/alegreya-italic-latin.woff2',
+  'assets/fonts/alegreya-italic-latin-ext.woff2',
+  'assets/fonts/alegreya-italic-greek.woff2',
   'assets/fonts/hanken-grotesk.woff2',
   'assets/icons/icon.svg',
   'assets/icons/favicon.svg',
+  'assets/icons/icon-maskable.svg',
+  'assets/icons/icon-48.png',
   'assets/icons/icon-192.png',
   'assets/icons/icon-512.png',
   'assets/icons/icon-maskable-512.png',
