@@ -330,6 +330,9 @@ svg{flex:none;width:16px;height:16px}
 .track{position:relative;overflow:hidden;background:color-mix(in srgb,var(--surface) 88%,transparent);border:1px solid var(--line);border-radius:var(--r-row);padding:var(--s4);transition:border-color .3s}
 .tbg{position:absolute;inset:0;z-index:0;background-size:cover;background-position:center;opacity:0;transition:opacity .7s ease;pointer-events:none}
 .tbg.show{opacity:.34}
+/* a composition opening: each row rises a few pixels and fades in, 40 ms after the one above */
+.track.enter{animation:row-in .24s cubic-bezier(.2,.7,.3,1) calc(var(--i,0) * 40ms) both}
+@keyframes row-in{from{opacity:0;transform:translateY(8px)}}
 /* a picture never passes under text: it is held clear of the left half and fades in towards the right */
 .tbg::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,var(--surface) 45%,color-mix(in srgb,var(--surface) 62%,transparent) 76%,color-mix(in srgb,var(--surface) 30%,transparent))}
 /* in a narrow window there is no room to hold the picture clear of the controls: fade it right back */
@@ -748,5 +751,7 @@ input[type=range].imm-vol::-moz-range-thumb{width:14px;height:14px;border:0;back
   .sky .depth{transition:none;transform:none!important}
   .name{transition:none}
   .seg-pill{transition:none}
+  .track.enter{animation:none}
+  .tbg{transition:none}
   .imm-blur,.imm-bg,.imm canvas{translate:none!important}
 }

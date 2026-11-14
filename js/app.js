@@ -742,6 +742,7 @@ async function openComp(c, noPush) {
   // This way a save made while files are still loading can never drop a sound.
   const tracks = d.tracks.map(fromJson);
   tracks.forEach(attachTrack);
+  cascadeRows(tracks);
   let i = 0;
   const worker = async () => { while (i < tracks.length && cur === me) await loadTrack(tracks[i++]); };
   await Promise.all([worker(), worker(), worker()]);
@@ -1406,6 +1407,14 @@ watchSeg($('viewSeg')); watchSeg($('libTabs'));
 /* ---------- sounds in the composition ---------- */
 const panLabel = v => { const n = Math.round(Math.abs(v) * 100); return n < 5 ? 'Centre' : (v < 0 ? 'Left ' : 'Right ') + n; };
 
+const trackDot = t => t.missing ? `<span class="dot miss" title="The audio file is missing">${ICO.alert}</span>` : '<span class="dot"></span>';
+const missingLine = t => `<p class="warn">${ICO.alert}<span>The audio file for this sound is missing (<b>${esc(t.file.split('/').pop())}</b>).</span>
+       <button class="ghost sm relink">Choose the file…</button>
+       <button class="quiet sm dropit">Remove this sound</button></p>`;
+function wireMissing(t, el) {
+  el.querySelector('.relink').onclick = () => { relinkTarget = t; $('relinkIn').click(); };
+  el.querySelector('.dropit').onclick = () => removeTrack(t);
+}
 function renderTrack(t) {
   const el = document.createElement('div');
   el.className = 'track' + (t.missing ? ' missing' : '');
@@ -1455,7 +1464,7 @@ function renderTrack(t) {
     <button class="tclose" title="Close (Esc)">Done</button>
     <div class="top">
       <span class="grip" tabindex="0" role="button" title="Drag to reorder, or use the up and down arrows" aria-label="Move ${esc(t.name)}">${ICO.grip}</span>
-      ${t.missing ? `<span class="dot miss" title="The audio file is missing">${ICO.alert}</span>` : '<span class="dot"></span>'}
+      ${trackDot(t)}
       <input class="name" value="${esc(t.name)}" title="Click to rename · file: ${esc(t.file)}" spellcheck="false" aria-label="Name of the sound">
       <span class="tname">${esc(t.name)}</span>
       <div class="imgctl">
@@ -1474,9 +1483,7 @@ function renderTrack(t) {
         <button class="icon del" title="Remove from this composition" aria-label="Remove ${esc(t.name)} from this composition">${ICO.x}</button>
       </div>
     </div>
-    ${t.missing ? `<p class="warn">${ICO.alert}<span>The audio file for this sound is missing (<b>${esc(t.file.split('/').pop())}</b>).</span>
-       <button class="ghost sm relink">Choose the file…</button>
-       <button class="quiet sm dropit">Remove this sound</button></p>` : ''}
+    ${t.missing ? missingLine(t) : ''}
     <div class="grid">
       <div class="field"><label>Volume <span class="val vv">${Math.round(t.volume * 100)}%</span></label>
         <input type="range" class="vol" min="0" max="100" value="${Math.round(t.volume * 100)}" aria-label="Volume"></div>
@@ -1510,10 +1517,7 @@ function renderTrack(t) {
   q('.del').onclick = () => removeTrack(t);
   q('.keep').onclick = () => savePreset(t);
   q('.tclose').onclick = () => unfocusTrack();
-  if (t.missing) {
-    q('.relink').onclick = () => { relinkTarget = t; $('relinkIn').click(); };
-    q('.dropit').onclick = () => removeTrack(t);
-  }
+  if (t.missing) wireMissing(t, el);
   // the ready-made places simply move the sliders below
   el.querySelectorAll('.place').forEach(b => b.onclick = () => {
     const p = PLACES.find(x => x[0] === b.dataset.p)[2];
@@ -1659,6 +1663,10 @@ function replaceEl(t) {
   if (!t.el) return;
   segSizes.unobserve(t.el.querySelector('.mode .seg'));
   const n = renderTrack(t);
+  const ob = t.el.querySelector('.tbg'), nb = n.querySelector('.tbg');
+  if (t.img && ob.classList.contains('show') && ob.dataset.url === t.img.url) {
+    nb.style.backgroundImage = ob.style.backgroundImage; nb.dataset.url = ob.dataset.url; nb.classList.add('show');
+  }
   if (focusT === t) { n.classList.add('focused'); t.el.removeEventListener('keydown', trapInTile); n.addEventListener('keydown', trapInTile); }
   t.el.replaceWith(n); t.el = n;
   setTileFocus(); updateLive(); updateWhyOff(); applyFind();
@@ -1897,10 +1905,39 @@ async function loadTrack(t) {
     if (t.seamless && t.mode === 'loop') t.loopBuf = makeSeamless(t.buffer, t.fade);
   } catch (e) { t.missing = true; }
   if (cur !== me || !cur.tracks.includes(t)) return false;
-  replaceEl(t);
+  showLoaded(t);
   if (playing && t.buffer) resetTrack(t, ctx.currentTime + 0.05);
   refreshGains(); updateEmpty();
   return true;
+}
+/* The audio of a sound has arrived (or turned out to be missing). The row is not rebuilt: its picture
+   and any control the person is already using stay as they are; only the parts that depend on the
+   audio change. */
+function showLoaded(t) {
+  const el = t.el;
+  if (!el) return;
+  const d = baseDur(t);
+  el.querySelectorAll('.dur, .tdur').forEach(x => x.textContent = d);
+  el.querySelectorAll('.test, .seam').forEach(b => b.disabled = !t.buffer);
+  if (t.missing && !el.querySelector(':scope > .warn')) {
+    el.classList.add('missing');
+    el.querySelector('.dot').outerHTML = trackDot(t);
+    el.querySelector(':scope > .top').insertAdjacentHTML('afterend', missingLine(t));
+    wireMissing(t, el);
+  }
+  updateLive(); updateWhyOff(); applyFind();
+}
+/* Opening a composition: the rows appear one after another, from the top. Only then, never for a
+   sound added later. The delay stops growing after a dozen rows, so a long list is not held back. */
+function cascadeRows(tracks) {
+  tracks.forEach((t, i) => {
+    const el = t.el;
+    el.style.setProperty('--i', Math.min(i, 12));
+    el.classList.add('enter');
+    el.addEventListener('animationend', e => {
+      if (e.target === el && e.animationName === 'row-in') { el.classList.remove('enter'); el.style.removeProperty('--i'); }
+    });
+  });
 }
 async function addTrack(t, mark = true) {
   attachTrack(t);
