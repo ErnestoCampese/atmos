@@ -844,9 +844,63 @@ function setCover(url) {
   if (url) $('coverImg').src = url;
   $('coverBtn').classList.toggle('has', !!url);
   $('coverActs').hidden = !url;
-  // the atmosphere at the top of the page is the cover, blurred, over the palette's own horizon
-  $('atmoImg').hidden = !url;
-  if (url) $('atmoImg').src = url;
+  setAtmo(url);
+}
+/* The atmosphere behind the whole editor is the cover, blurred; without one, the palette's horizon.
+   The blur is done once, on a small copy of the picture, which is then only scaled up. */
+let atmoFor = null;
+async function setAtmo(url) {
+  const pic = $('atmoPic');
+  atmoFor = url;
+  $('atmo').classList.toggle('has', !!url);
+  pic.classList.remove('on');
+  if (!url) { pic.style.backgroundImage = ''; return; }
+  try {
+    // decoded and made small away from the page's own work, so opening a composition stays smooth
+    const bmp = await createImageBitmap(await (await fetch(url)).blob(), { resizeWidth: 160, resizeQuality: 'medium' });
+    // and only once the page is idle: the rows of a composition that is opening come first
+    await new Promise(r => window.requestIdleCallback ? requestIdleCallback(r, { timeout: 800 }) : setTimeout(r, 300));
+    if (atmoFor !== url) { bmp.close(); return; }
+    const W = 128, H = Math.max(1, Math.round(W * bmp.height / bmp.width)), m = 6;
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const g = c.getContext('2d');
+    const canBlur = typeof g.filter === 'string';
+    if (canBlur) g.filter = 'blur(2px) saturate(1.2)';
+    g.drawImage(bmp, -m, -m, W + 2 * m, H + 2 * m);   // drawn a little larger, so the blur does not darken the edges
+    bmp.close();
+    pic.style.backgroundImage = cssUrl(c.toDataURL());
+    pic.classList.toggle('css-blur', !canBlur);
+    $('atmo').style.setProperty('--veil', Math.round(veilFor(c) * 100) + '%');
+  } catch (e) {
+    // the picture as it is, blurred by the browser, under the strongest veil
+    if (atmoFor !== url) return;
+    pic.style.backgroundImage = cssUrl(url);
+    pic.classList.add('css-blur');
+    $('atmo').style.setProperty('--veil', '92%');
+  }
+  requestAnimationFrame(() => { if (atmoFor === url) pic.classList.add('on'); });
+}
+/* How strongly to veil the cover so that text on the background stays readable: the weakest veil
+   under which even the brighter parts of the cover come out dark enough for the warning colour to
+   read at 4.5:1. A dark cover keeps more of its colour; a pale one is veiled more. */
+function veilFor(src) {
+  const N = 24, c = document.createElement('canvas'); c.width = c.height = N;
+  const g = c.getContext('2d');
+  let px;
+  try { g.drawImage(src, 0, 0, N, N); px = g.getImageData(0, 0, N, N).data; } catch (err) { return 0.8; }
+  const bg = [13, 18, 34], lin = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+  const bright = a => {   // the luminance that 95 % of the veiled cover stays under
+    const L = [];
+    for (let i = 0; i < px.length; i += 4) {
+      const mix = k => bg[k] * a + px[i + k] * (1 - a);
+      L.push(0.2126 * lin(mix(0)) + 0.7152 * lin(mix(1)) + 0.0722 * lin(mix(2)));
+    }
+    return L.sort((x, y) => x - y)[Math.floor(L.length * 0.95)];
+  };
+  let lo = 0.55, hi = 0.92;
+  if (bright(lo) <= 0.04) return lo;
+  for (let k = 0; k < 10; k++) { const mid = (lo + hi) / 2; if (bright(mid) <= 0.04) hi = mid; else lo = mid; }
+  return hi;
 }
 function setMasterUI() {
   const v = Math.round(cur.volume * 100);

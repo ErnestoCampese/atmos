@@ -210,13 +210,20 @@ svg{flex:none;width:16px;height:16px}
 .arch-item .an small{color:var(--muted);font-size:12px}
 
 /* ---------- editor ---------- */
-/* the atmosphere: the cover, blurred, tints the top of the page */
-/* The tint is kept off the top strip and the title, where it used to make the text unreadable. */
-.atmo{position:absolute;z-index:-1;top:0;left:0;right:0;height:520px;overflow:hidden;pointer-events:none;opacity:.8;
-  background:linear-gradient(120deg,var(--horizon-1),var(--horizon-2));
-  -webkit-mask-image:linear-gradient(to bottom,rgba(0,0,0,.4) 0,#000 190px,rgba(0,0,0,.55) 52%,transparent 100%);
-  mask-image:linear-gradient(to bottom,rgba(0,0,0,.4) 0,#000 190px,rgba(0,0,0,.55) 52%,transparent 100%)}
-.atmo img{position:absolute;inset:-20%;width:140%;height:140%;object-fit:cover;filter:blur(64px) saturate(1.25);opacity:.6;transform:translate3d(0,calc(var(--sy,0) * .25px),0)}
+/* The atmosphere: behind the whole editor, fixed to the window, the cover blurred just enough that
+   its main areas of colour stay recognisable. A dark veil over it keeps the text that sits on the
+   background readable even on a very pale cover, and keeps the working screen calmer than immersion.
+   There is no band and no mask, so no edge anywhere. Without a cover it is not drawn at all, and the
+   palette's horizon shows as before. */
+.atmo{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+.atmo:not(.has){display:none}
+/* the picture is blurred once, small, and only scaled up here: no filter runs while scrolling or playing */
+.atmo-pic{position:absolute;inset:-8%;background:center/cover no-repeat;opacity:0;transition:opacity .4s ease;
+  transform:translate3d(0,calc(max(var(--sy,0) * -.04px,-48px)),0);will-change:transform}
+.atmo-pic.on{opacity:1}
+.atmo-pic.css-blur{filter:blur(28px) saturate(1.2)}   /* browsers that cannot blur on a canvas */
+/* the veil is set from the cover itself: stronger on a pale one, lighter on a dark one, which keeps more of its colour */
+.atmo::after{content:"";position:absolute;inset:0;background:color-mix(in srgb,var(--bg) var(--veil,80%),transparent)}
 
 .ed-top{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);margin-bottom:var(--s5);min-height:40px}
 /* on a tint, secondary text uses the main colour: the way back must be easy to read */
@@ -340,7 +347,7 @@ svg{flex:none;width:16px;height:16px}
 }
 
 /* ---------- one sound ---------- */
-.track{position:relative;overflow:hidden;background:color-mix(in srgb,var(--surface) 88%,transparent);border:1px solid var(--line);border-radius:var(--r-row);padding:var(--s4);transition:border-color .3s}
+.track{position:relative;overflow:hidden;background:color-mix(in srgb,var(--surface) 92%,transparent);border:1px solid var(--line);border-radius:var(--r-row);padding:var(--s4);transition:border-color .3s}
 .tbg{position:absolute;inset:0;z-index:0;background-size:cover;background-position:center;opacity:0;transition:opacity .7s ease;pointer-events:none}
 .tbg.show{opacity:.34}
 /* a composition opening: each row rises a few pixels and fades in, 40 ms after the one above */
@@ -765,6 +772,7 @@ input[type=range].imm-vol::-moz-range-thumb{width:14px;height:14px;border:0;back
   .name{transition:none}
   .seg-pill{transition:none}
   .track.enter{animation:none}
+  .atmo-pic{transition:none}
   .tbg{transition:none}
   .imm-blur,.imm-bg,.imm canvas{translate:none!important}
 }
