@@ -314,16 +314,22 @@ svg{flex:none;width:16px;height:16px}
 
 .ed-grid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:var(--s6);align-items:start}
 .list{display:flex;flex-direction:column;gap:var(--s3)}
-.viewbar{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);margin:0 0 var(--s4);min-height:40px;flex-wrap:wrap}
-.viewbar h2,.export h2{font-size:26px;font-weight:380;line-height:1.25}
+/* above the sounds: the heading on a line of its own, then a toolbar on the edges of the list —
+   the field to find a sound on the left, the view on the right. The toolbar keeps its height
+   whether the field is shown or not. */
+.list-head{height:40px;line-height:40px;margin:0 0 var(--s2)}
+.list-head,.export h2{font-size:26px;font-weight:380}
+.export h2{line-height:1.25}
+.viewbar{display:flex;align-items:center;gap:var(--s2);margin:0 0 var(--s4);min-height:40px;flex-wrap:wrap}
+.viewbar .seg{margin-left:auto}
 .viewbar .seg button{display:inline-flex;align-items:center;gap:var(--s2)}
 .viewbar .seg svg{width:16px;height:16px}
-.viewbar .find{width:180px;height:32px;border-radius:var(--r-ctl);font-size:13px}
+.viewbar .find{flex:0 1 240px;min-width:0}
 .to-lib{display:none}
-@media (max-width:900px){ .to-lib{display:inline-flex;margin-left:auto} }
+@media (max-width:900px){ .to-lib{display:inline-flex;margin-left:auto} .to-lib~.seg{margin-left:0} }
 @media (min-width:901px){
-  /* both columns start on the same line */
-  .lib{margin-top:56px}
+  /* both columns start on the same line: the heading, the gap below it, the toolbar and the gap below that */
+  .lib{margin-top:calc(40px + var(--s2) + 40px + var(--s4))}
 }
 
 /* ---------- one sound ---------- */
