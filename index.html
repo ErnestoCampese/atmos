@@ -118,11 +118,8 @@
       <input type="file" id="trackImgIn" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" hidden>
       <input type="file" id="relinkIn" accept="audio/*,.mp3,.wav,.ogg,.flac,.m4a" hidden>
       <div class="grow">
-        <div class="title-row">
-          <input class="title" id="title" placeholder="Name your composition" spellcheck="false" aria-label="Title of the composition">
-          <button class="icon title-edit" id="titleEdit" title="Rename this composition" aria-label="Rename this composition"></button>
-        </div>
-        <p class="comp-meta" id="compMeta"></p>
+        <input class="title" id="title" placeholder="Name your composition" spellcheck="false" aria-label="Title of the composition">
+        <div class="desc" id="desc" contenteditable="plaintext-only" role="textbox" aria-label="Description of the composition" data-ph="A few words about it: a place, a mood, a moment of the day…" spellcheck="false"></div>
       </div>
     </div>
 
@@ -151,7 +148,7 @@
 
     <div class="ed-grid">
       <div>
-        <h2 class="list-head">Sounds</h2>
+        <h2 class="list-head">Sounds<span class="list-meta" id="compMeta"></span></h2>
         <div class="viewbar">
           <input class="search find" id="findSound" placeholder="Find a sound" aria-label="Find a sound in this composition" hidden>
           <button class="ghost to-lib" id="toLib">Your sounds</button>

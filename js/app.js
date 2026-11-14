@@ -410,11 +410,15 @@ function cleanComp(raw) {
   if (!d || typeof d !== 'object' || Array.isArray(d)) return null;
   const im = d.immersion && typeof d.immersion === 'object' ? d.immersion : {};
   const str = v => typeof v === 'string' && v ? v : null;
-  return { version: 2, name: typeof d.name === 'string' ? d.name : '', cover: str(d.cover), masterVolume: num(d.masterVolume, 0.8, 0, 1),
+  const out = { version: 2, name: typeof d.name === 'string' ? d.name : '', cover: str(d.cover), masterVolume: num(d.masterVolume, 0.8, 0, 1),
     // "archived" is optional and new: a file written before it existed simply counts as not archived
     archived: !!d.archived,
     immersion: { effect: typeof im.effect === 'string' ? im.effect : 'fireflies', background: str(im.background), pixelArt: !!im.pixelArt, fill: !!im.fill },
     tracks: (Array.isArray(d.tracks) ? d.tracks : []).map(upgradeTrack).filter(validTrack) };
+  // "description" is optional too: a file without one has none
+  const desc = typeof d.description === 'string' ? d.description.replace(/\s+/g, ' ').trim() : '';
+  if (desc) out.description = desc;
+  return out;
 }
 async function loadComps() {
   comps.forEach(c => { if (c.coverUrl) URL.revokeObjectURL(c.coverUrl); });   // release the covers of the previous list
@@ -675,7 +679,7 @@ async function deleteForever(c) {
 }
 
 /* ---------- a composition ---------- */
-const blank = () => ({ file: null, name: '', cover: null, coverUrl: null, coverPending: null, volume: 0.8, tracks: [], dirty: false,
+const blank = () => ({ file: null, name: '', description: '', cover: null, coverUrl: null, coverPending: null, volume: 0.8, tracks: [], dirty: false,
   archived: false, savedAt: 0,
   effect: 'fireflies', background: null, bgUrl: null, bgPending: null, pixel: false, fill: false });
 const FILTER_KEYS = ['reverb', 'echo', 'muffled', 'thin', 'waves', 'movement', 'trajectory'];
@@ -707,6 +711,7 @@ function enterEditor() {
   saveFail = null;
   $('title').value = cur.name;
   sizeTitle();
+  setDesc(cur.description);
   setMasterUI();
   master.gain.value = cur.volume;
   $('list').innerHTML = '';
@@ -731,7 +736,7 @@ function pushView(hash) {
 }
 async function openComp(c, noPush) {
   const d = c.data;
-  cur = Object.assign(blank(), { file: c.file, name: d.name, cover: d.cover, coverUrl: c.coverUrl, volume: d.masterVolume,
+  cur = Object.assign(blank(), { file: c.file, name: d.name, description: d.description || '', cover: d.cover, coverUrl: c.coverUrl, volume: d.masterVolume,
     archived: !!d.archived, savedAt: c.mod,
     effect: d.immersion.effect, background: d.immersion.background, pixel: d.immersion.pixelArt, fill: d.immersion.fill });
   if (!noPush) pushView(compId(c));
@@ -763,6 +768,7 @@ window.addEventListener('popstate', async () => {
   }
 });
 async function leaveEditor() {
+  if (document.activeElement === $('desc')) $('desc').blur();   // a description being typed is kept
   if (cur && (cur.dirty || saving)) await saveComp(false);
   if (cur && saveFail) {
     const go = await dialog({
@@ -889,6 +895,7 @@ async function doSave(manual) {
     }
     const data = { version: 2, name, cover: c.cover, masterVolume: r2(c.volume),
       immersion: { effect: c.effect, background: c.background, pixelArt: !!c.pixel, fill: !!c.fill }, tracks: c.tracks.map(toJson) };
+    if (c.description) data.description = c.description;
     if (c.archived) data.archived = true;
     await writeFile(c.file, JSON.stringify(data, null, 2));
     if (c.renamedFrom) {
@@ -1766,7 +1773,7 @@ function updateEmpty() {
   if (n <= 8 && $('findSound').value) { $('findSound').value = ''; applyFind(); }
   const miss = cur ? cur.tracks.filter(t => t.missing).length : 0;
   $('compMeta').innerHTML = n
-    ? esc(plural(n, 'sound', 'sounds')) + (miss ? `<span class="sep">·</span><span class="warn-line">${esc(plural(miss, 'sound', 'sounds'))} missing</span>` : '')
+    ? `<span class="sep">·</span>${n}` + (miss ? `<span class="sep">·</span><span class="warn-line">${miss} missing</span>` : '')
     : '';
 }
 /* with many sounds, a field to find one by name instead of scrolling */
@@ -2350,7 +2357,7 @@ $('relinkIn').onchange = async e => {
   } catch (e2) { toast('Couldn\'t copy that file into your folder.'); }
 };
 /* A long title is made smaller rather than cut off mid-word, and the full text is always
-   there as a tooltip. The pencil beside it is how you find out it can be renamed at all. */
+   there as a tooltip. */
 function sizeTitle() {
   const el = $('title'), n = el.value.length;
   el.classList.toggle('t-long', n > 38 && n <= 56);
@@ -2358,8 +2365,33 @@ function sizeTitle() {
   el.classList.toggle('t-xxlong', n > 72);
   el.title = el.value;
 }
-$('titleEdit').innerHTML = ICO.pencil;
-$('titleEdit').onclick = () => { const el = $('title'); el.focus(); el.select(); };
+/* The description: Enter or clicking away keeps it, Escape puts back what was there. It is one
+   paragraph, so line breaks become spaces. */
+let descWas = '';
+function setDesc(text) {
+  const d = $('desc');
+  d.textContent = text || '';
+  d.title = text || '';
+}
+(() => {
+  const d = $('desc');
+  if (d.contentEditable !== 'plaintext-only') {    // browsers without plain-text editing: paste the text only
+    d.contentEditable = 'true';
+    d.addEventListener('paste', e => { e.preventDefault(); document.execCommand('insertText', false, e.clipboardData.getData('text/plain')); });
+  }
+  d.addEventListener('focus', () => { descWas = cur ? cur.description : ''; });
+  d.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); d.blur(); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); d.textContent = descWas; d.blur(); }
+  });
+  d.addEventListener('input', () => { if (!d.textContent) d.textContent = ''; });   // keeps it truly empty, so the sample can show
+  d.addEventListener('blur', () => {
+    if (!cur) return;
+    const v = d.textContent.replace(/\s+/g, ' ').trim();
+    setDesc(v);
+    if (v !== cur.description) { cur.description = v; markDirty(); }
+  });
+})();
 $('search').oninput = renderLibrary;
 $('rescan').onclick = async () => { await scanLibrary(); renderLibrary(); toast('Your sounds refreshed', { kind: 'info' }); };
 $('exBtn').onclick = exportMix;
@@ -2420,7 +2452,8 @@ document.addEventListener('keydown', e => {
   // in immersion the space bar always starts and stops; F switches to full screen
   if (immOpen && e.code === 'Space') { e.preventDefault(); playing ? stop() : start(); return; }
   if (immOpen && e.key.toLowerCase() === 'f') { e.preventDefault(); toggleFullscreen(); return; }
-  if (e.code === 'Space' && !['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON', 'A'].includes(tag)) {
+  const typing = document.activeElement && document.activeElement.isContentEditable;
+  if (e.code === 'Space' && !typing && !['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON', 'A'].includes(tag)) {
     e.preventDefault(); playing ? stop() : start();
   }
 });

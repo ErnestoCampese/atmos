@@ -238,11 +238,9 @@ svg{flex:none;width:16px;height:16px}
   background:color-mix(in srgb,var(--surface) 78%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
   color:var(--text);font-size:12px;font-weight:600}
 .cover-acts button:hover{background:var(--surface)}
-/* The title is a title first and a field second: it shows its shape on hover and on focus,
-   and a pencil beside it says, at rest, that it can be changed. A long one shrinks rather
-   than being cut off in the middle of a word. */
-.title-row{display:flex;align-items:center;gap:var(--s2)}
-.title{flex:1;min-width:0;border:1px solid transparent;background:transparent;font-family:var(--display);font-style:italic;font-size:52px;font-weight:300;letter-spacing:-.015em;line-height:1.3;
+/* The title is a title first and a field second: it shows its shape on hover and on focus, and the
+   pointer becomes a text cursor over it. A long one shrinks rather than being cut off in the middle of a word. */
+.title{display:block;width:100%;min-width:0;border:1px solid transparent;background:transparent;font-family:var(--display);font-style:italic;font-size:52px;font-weight:300;letter-spacing:-.015em;line-height:1.3;
   padding:0 var(--s2);margin-left:-9px;border-radius:var(--r-ctl);text-overflow:ellipsis;
   transition:background .12s,border-color .12s,font-size .15s}
 .title.t-long{font-size:38px;line-height:1.32}
@@ -251,12 +249,17 @@ svg{flex:none;width:16px;height:16px}
 .title:hover{border-color:var(--ctl)}
 .title:focus{border-color:var(--text);background:var(--raise)}
 .title::placeholder{color:var(--muted);opacity:.8}
-.title-edit{flex:none;border-color:transparent;background:transparent;color:var(--text2)}
-.title-row:hover .title-edit,.title-edit:focus-visible{border-color:var(--ctl);color:var(--text)}
-/* named for the composition line only: "count" alone also matched the "About N times" field,
-   which then sat on a different line from the words beside it */
-.comp-meta{margin:var(--s2) 0 0;color:var(--text);font-size:14px;min-height:21px}
-.comp-meta .sep{color:var(--text2);margin:0 6px}
+/* The optional description under the title, edited in place like it. It always has its place:
+   without one, a sample sentence in a very faint tone says what the space is for; a description
+   someone wrote reads clearly, on up to two lines. */
+.desc{margin:var(--s1) 0 0 -9px;padding:var(--s1) var(--s2);border:1px solid transparent;border-radius:var(--r-ctl);
+  font:400 14px/20px var(--ui);color:var(--text);overflow-wrap:anywhere;cursor:text;outline:none;
+  transition:background .12s,border-color .12s}
+.desc:not(:focus){display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.desc:empty::before{content:attr(data-ph);color:var(--muted);opacity:.55}
+.desc:hover{border-color:var(--ctl)}
+.desc:focus{border-color:var(--text);background:var(--raise)}
+.desc:focus-visible{outline:none}
 
 /* The bar stays pinned while you scroll, and carries the one thing you must always be able to
    check — whether your work is saved. When pinned it sits on a solid strip, so nothing
@@ -318,6 +321,10 @@ svg{flex:none;width:16px;height:16px}
    the field to find a sound on the left, the view on the right. The toolbar keeps its height
    whether the field is shown or not. */
 .list-head{height:40px;line-height:40px;margin:0 0 var(--s2)}
+/* how many sounds, and how many have lost their file, beside the heading */
+.list-meta{font:500 14px var(--ui);letter-spacing:0;color:var(--text2)}
+.list-meta .sep{margin:0 var(--s2)}
+.list-meta .warn-line{color:var(--warn)}
 .list-head,.export h2{font-size:26px;font-weight:380}
 .export h2{line-height:1.25}
 .viewbar{display:flex;align-items:center;gap:var(--s2);margin:0 0 var(--s4);min-height:40px;flex-wrap:wrap}
