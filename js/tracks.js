@@ -440,7 +440,7 @@ function replaceEl(t) {
   if (t.img && ob && nb && ob.classList.contains('show') && ob.dataset.url === t.img.url) {
     nb.style.backgroundImage = ob.style.backgroundImage; nb.dataset.url = ob.dataset.url; nb.classList.add('show');
     const wide = n.querySelector('.tbg'); if (wide) wide.style.backgroundImage = ob.style.backgroundImage;
-    n.classList.add('has-pic');
+    n.classList.add('has-pic'); n.classList.toggle('pic-light', !!t.img.light);
   }
   t.el.replaceWith(n); t.el = n;
   updateLive(); updateWhyOff(); applyFind();
@@ -585,8 +585,8 @@ function paintTrackImage(t, el = t.el) {
   // the same picture, large, behind the whole line and its open settings
   const wide = el.querySelector('.tbg');
   const show = url => { bg.style.backgroundImage = cssUrl(url); bg.dataset.url = url; bg.classList.add('show');
-    if (wide) wide.style.backgroundImage = cssUrl(url); el.classList.add('has-pic'); };
-  const hide = () => { bg.classList.remove('show'); el.classList.remove('has-pic'); };
+    if (wide) wide.style.backgroundImage = cssUrl(url); el.classList.add('has-pic'); el.classList.toggle('pic-light', !!(t.img && t.img.light)); };
+  const hide = () => { bg.classList.remove('show'); el.classList.remove('has-pic', 'pic-light'); };
   if (!t.img) { hide(); bg.style.backgroundImage = ''; bg.dataset.url = ''; return Promise.resolve(); }
   if (t.img.local && !t.img.url) {
     // your own image, saved in the folder: read it first, then show it
@@ -599,7 +599,19 @@ function paintTrackImage(t, el = t.el) {
   const im = new Image();
   im.src = url;
   // decoded before it is drawn, so it appears whole
-  return im.decode().then(() => { if (t.img && t.img.url === url) show(url); }, () => {});
+  return im.decode().then(() => { if (t.img && t.img.url === url) { t.img.light = isLightPicture(im); show(url); } }, () => {});
+}
+/* Is this picture light on the whole? Read once, small, when it loads; the controls over it change their style.
+   A picture from another site may not allow being read: it then counts as dark, and nothing else changes.
+   Kept only in memory: the composition file stores the picture's place, never this. */
+function isLightPicture(im) {
+  try {
+    const c = document.createElement('canvas'); c.width = c.height = 24;
+    const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(im, 0, 0, 24, 24);
+    const d = g.getImageData(0, 0, 24, 24).data; let sum = 0;
+    for (let i = 0; i < d.length; i += 4) sum += (.2126 * d[i] + .7152 * d[i + 1] + .0722 * d[i + 2]) / 255;
+    return sum / (d.length / 4) > .5;
+  } catch (e) { return false; }
 }
 let imgTarget = null;
 async function setOwnImage(t, file) {

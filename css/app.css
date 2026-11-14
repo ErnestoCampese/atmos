@@ -547,6 +547,12 @@ p.count{margin-top:auto;padding-block:var(--s2);color:var(--mute);font-size:13px
 .track.has-pic{--rule:rgb(255 255 255/.09);--line:rgb(255 255 255/.16)}
 /* and the ground of the controls (choices, menus, numbers) lets a little of the picture through, so they sit on it lightly */
 .track.has-pic{--field:rgb(23 21 27/.68)}
+/* over a light picture the controls turn to light glass: a pale see-through ground and a brighter edge,
+   the look "Settings" has when it is open. "Only this" keeps its own colours while it is on. */
+.track.pic-light{--field:rgb(255 255 255/.07);--rule:rgb(255 255 255/.12);--line:rgb(255 255 255/.24);--edge:rgb(255 255 255/.28)}
+.track.pic-light :is(.chip,.opener,.ghost):not([aria-checked="true"]):not(:disabled){background:rgb(255 255 255/.08);border-color:var(--line);color:var(--ink)}
+.track.pic-light :is(.chip,.opener,.ghost):not([aria-checked="true"]):not(:disabled):hover,
+.track.pic-light .opener[aria-expanded="true"]{background:rgb(255 255 255/.14);border-color:var(--mute)}
 /* open, the picture shows more, so the quiet words of the settings are lit one step, enough to read over its brightest parts */
 .track.has-pic.is-open{background:var(--card2);--mute:var(--ink2);--mute-lit:var(--ink2)}
 .track.has-pic.is-open>.tbg{opacity:.17;--pic-l:1}
