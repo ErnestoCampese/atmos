@@ -29,19 +29,46 @@ const num = (v, d, lo, hi) => { v = Number(v); return Number.isFinite(v) ? Math.
 const pick = (v, obj, d) => typeof v === 'string' && Object.prototype.hasOwnProperty.call(obj, v) ? v : d;
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 const cssUrl = u => `url("${String(u).replace(/["\\\n\r]/g, c => encodeURIComponent(c))}")`;
-/* A message at the bottom of the window. With an action (Undo…) it stays longer and can be clicked. */
+/* A message at the bottom of the window. With an action (Undo…) it stays longer and can be clicked.
+   Its kind picks the icon: done (the default), info, or warn. Every "Couldn't…" is a warning, and
+   warnings are announced at once. A message replacing one still on screen cross-fades with it. */
 let toastT = null;
 function toast(msg, opts) {
   const o = opts || {}, t = $('toast'), act = $('toastAct');
+  const kind = o.kind || (/^Couldn't/.test(msg) ? 'warn' : 'done');
+  if (t.classList.contains('show')) {
+    const ghost = t.cloneNode(true);
+    ghost.removeAttribute('id'); ghost.removeAttribute('role'); ghost.setAttribute('aria-hidden', 'true');
+    ghost.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));
+    ghost.classList.remove('show'); ghost.classList.add('leave');
+    ghost.addEventListener('animationend', () => ghost.remove());
+    setTimeout(() => ghost.remove(), 400);
+    t.after(ghost);
+  }
+  t.classList.remove('show', 'leave');
+  t.setAttribute('role', kind === 'warn' ? 'alert' : 'status');
+  t.dataset.kind = kind;
+  $('toastIco').innerHTML = ICO[kind === 'warn' ? 'alert' : kind === 'info' ? 'info' : 'check'];
   $('toastMsg').textContent = msg;
   act.hidden = !o.action;
   t.classList.toggle('has-act', !!o.action);
   if (o.action) { act.textContent = o.action; act.onclick = () => { hideToast(); o.onAction(); }; }
+  void t.offsetWidth;
   t.classList.add('show');
   clearTimeout(toastT);
   toastT = setTimeout(hideToast, o.ms || (o.action ? 8000 : 3400));
 }
-function hideToast() { clearTimeout(toastT); $('toast').classList.remove('show', 'has-act'); }
+function hideToast() {
+  clearTimeout(toastT);
+  const t = $('toast');
+  if (!t.classList.contains('show')) return;
+  t.classList.remove('show');
+  t.classList.add('leave');
+}
+/* keep the action's padding while it fades, so the pill doesn't change shape on its way out */
+$('toast').addEventListener('animationend', e => {
+  if (e.animationName === 'toast-out') e.currentTarget.classList.remove('leave', 'has-act');
+});
 function show(v) { ['vWelcome', 'vHome', 'vEditor'].forEach(id => $(id).hidden = id !== v); $('atmo').hidden = v !== 'vEditor'; $('sky').dataset.view = v; window.scrollTo(0, 0); }
 
 /* icons */
@@ -63,6 +90,7 @@ const ICO = {
   undo: svg('<path d="M4 9h11a5 5 0 0 1 0 10H9M4 9l4-4M4 9l4 4"/>'),
   check: svg('<path d="m5 12.5 4.5 4.5L19 7"/>', 'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"'),
   alert: svg('<path d="M12 4.5 2.8 20h18.4z"/><path d="M12 10v4M12 17.2v.3"/>'),
+  info: svg('<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 7.8v.3"/>'),
   plus: svg('<path d="M12 5v14M5 12h14"/>'),
   loop: svg('<path d="M7.5 9.5a3.2 3.2 0 1 1 0 5 15 15 0 0 1-2-2.5 15 15 0 0 0-2-2.5 3.2 3.2 0 1 0 0 5"/><path d="M16.5 9.5a3.2 3.2 0 1 1 0 5 15 15 0 0 1-2-2.5 15 15 0 0 0-2-2.5 3.2 3.2 0 1 0 0 5" transform="translate(-4.5)"/>'),
   grip: '<svg viewBox="0 0 10 16" fill="currentColor" aria-hidden="true"><circle cx="3" cy="3" r="1.3"/><circle cx="7" cy="3" r="1.3"/><circle cx="3" cy="8" r="1.3"/><circle cx="7" cy="8" r="1.3"/><circle cx="3" cy="13" r="1.3"/><circle cx="7" cy="13" r="1.3"/></svg>'
@@ -312,7 +340,7 @@ async function useFolder(h) {
         copertine → covers…). All your sounds, compositions and images are kept.</p>`,
       actions: [{ label: 'Not now', kind: 'quiet', value: false }, { label: 'Convert this folder', kind: 'primary', value: true }]
     });
-    if (!ok) { toast('Nothing was changed. Choose a different folder to continue.'); return; }
+    if (!ok) { toast('Nothing was changed. Choose a different folder to continue.', { kind: 'warn' }); return; }
     show('vWelcome');
     let n = 0;
     const st = $('welcomeStatus'); st.hidden = false; st.textContent = 'Converting your library…';
@@ -548,7 +576,7 @@ function startRename(c, card) {
     await renameComp(c, name);
     renderHome();
     toast(`Renamed to “${name}”`);
-    if (twin) setTimeout(() => toast(`You already have a composition called “${name}”.`, { ms: 6000 }), 600);
+    if (twin) setTimeout(() => toast(`You already have a composition called “${name}”.`, { ms: 6000, kind: 'info' }), 600);
   };
   inp.onkeydown = e => {
     if (e.key === 'Enter') { e.preventDefault(); finish(true); }
@@ -771,7 +799,7 @@ function markDirty() {
   if (!knowsAutoSave && cur.file) {
     knowsAutoSave = true;
     try { localStorage.setItem('atmos-autosave-told', '1'); } catch (e) {}
-    toast('No need to save — every change is kept in your folder automatically.', { ms: 6000 });
+    toast('No need to save — every change is kept in your folder automatically.', { ms: 6000, kind: 'info' });
   }
 }
 const agoText = t => {
@@ -803,7 +831,7 @@ function updateSaveUI() {
 }
 // only a real picture may be used as a cover, a sound's image or an immersion backdrop
 const isImage = f => !!f && /^image\/(png|jpeg|webp|gif|avif|bmp)$/.test(f.type);
-const notAPicture = () => toast('That file is not a picture. Choose a JPG, PNG or WebP image.', { ms: 5000 });
+const notAPicture = () => toast('That file is not a picture. Choose a JPG, PNG or WebP image.', { ms: 5000, kind: 'warn' });
 function setCover(url) {
   $('coverImg').hidden = !url; $('coverPh').hidden = !!url;
   if (url) $('coverImg').src = url;
@@ -822,7 +850,7 @@ async function saveComp(manual = true) {
   if (!cur) return;
   clearTimeout(autoT);
   if (saving) { await saving; if (!cur || !cur.dirty) return; }
-  if (!cur.dirty && cur.file && !saveFail) { if (manual) toast('Everything is already saved'); return; }
+  if (!cur.dirty && cur.file && !saveFail) { if (manual) toast('Everything is already saved', { kind: 'info' }); return; }
   saving = doSave(manual); updateSaveUI(); await saving; saving = null;
 }
 async function doSave(manual) {
@@ -1090,7 +1118,7 @@ const isSeamless = t => t.mode === 'loop' && t.seamless && t.loopBuf;
 function applySeamless(t) {
   if (!t.buffer) return;
   t.loopBuf = t.seamless ? makeSeamless(t.buffer, t.fade) : null;
-  if (t.seamless && !t.loopBuf) { t.seamless = false; toast('This sound is too short for a seamless loop'); }
+  if (t.seamless && !t.loopBuf) { t.seamless = false; toast('This sound is too short for a seamless loop', { kind: 'warn' }); }
   if (playing && t.st) resetTrack(t, ctx.currentTime + 0.05);
 }
 // remembers when each repeat starts, to draw the progress bar
@@ -1197,7 +1225,7 @@ function tick() {
   $('clock').textContent = fmt(ctx.currentTime - startedAt);
 }
 async function start() {
-  if (!cur || !cur.tracks.some(t => t.buffer)) { toast('Add a sound first'); return; }
+  if (!cur || !cur.tracks.some(t => t.buffer)) { toast('Add a sound first', { kind: 'info' }); return; }
   cur.tracks.forEach(stopTrackTest);   // stop the previews, or they would play over the mix
   stopPreview();
   stopToken++;
@@ -1292,7 +1320,7 @@ function toggleFsPreview(s, btn) {
   if (pv && pv.key === key) { stopPreview(); return; }
   stopPreview();
   const a = new Audio(s.previews['preview-hq-mp3']); a.volume = 0.8;
-  a.play().catch(() => { toast('Preview not available'); stopPreview(); });
+  a.play().catch(() => { toast('Preview not available', { kind: 'warn' }); stopPreview(); });
   pv = { key, btn, stop: () => { a.pause(); a.removeAttribute('src'); } }; setPvBtn(btn, true);
   a.onended = () => { if (pv && pv.key === key) stopPreview(); };
 }
@@ -1831,7 +1859,7 @@ function setImageUrl(t, url) {
   // first make sure the link really leads to an image
   const im = new Image();
   im.onload = () => { if (!cur || !cur.tracks.includes(t)) return; t.img = { url }; paintTrackImage(t); markDirty(); toast('Image added from the link'); };
-  im.onerror = () => toast('That link doesn\'t lead to an image');
+  im.onerror = () => toast('That link doesn\'t lead to an image', { kind: 'warn' });
   im.src = url;
 }
 $('trackImgIn').onchange = e => {
@@ -2037,8 +2065,8 @@ async function importFiles(files) {
     const ext = f.name.match(/\.[^.]+$/)[0].toLowerCase();
     try { await writeFile(await freeName(DIR.sounds, f.name.slice(0, -ext.length), ext), f); n++; } catch (e) {}
   }
-  if (n) { await scanLibrary(); renderLibrary(); toast(`${plural(n, 'sound', 'sounds')} added to your library`); }
-  else toast('No audio files to add');
+  if (n) { await scanLibrary(); renderLibrary(); toast(`${plural(n, 'sound', 'sounds')} added to your sounds`); }
+  else toast('No audio files to add', { kind: 'info' });
 }
 
 /* ---------- Freesound ---------- */
@@ -2081,7 +2109,7 @@ async function fsSearch(more) {
     const r = await fetch(url);
     if (req !== fsReq) return;
     if (r.status === 401) { list.innerHTML = '<p class="hint">Freesound didn\'t accept the key. Check it with “Change key”.</p>'; return; }
-    if (r.status === 429) { toast('Too many searches in a row. Try again in a moment.'); return; }
+    if (r.status === 429) { toast('Too many searches in a row. Try again in a moment.', { kind: 'warn' }); return; }
     if (!r.ok) throw new Error(r.status);
     const j = await r.json();
     if (req !== fsReq) return;
@@ -2171,7 +2199,7 @@ async function fsAdd(s, btn) {
     toast(`“${stripExt(s.name)}” added to this composition`);
   } catch (e) {
     btn.disabled = false; btn.innerHTML = ICO.plus;
-    toast(e.name === 'AbortError' ? 'The download stalled for 20 seconds and was stopped. Try again in a moment.' : 'The download failed. You can get the file from its Freesound page.');
+    toast(e.name === 'AbortError' ? 'The download stalled for 20 seconds and was stopped. Try again in a moment.' : 'The download failed. You can get the file from its Freesound page.', { kind: 'warn' });
   }
 }
 
@@ -2193,7 +2221,7 @@ function encodeWav(ab) {
   return new Blob([v], { type: 'audio/wav' });
 }
 async function exportMix() {
-  if (!cur || !cur.tracks.some(t => t.buffer)) { toast('Add a sound first'); return; }
+  if (!cur || !cur.tracks.some(t => t.buffer)) { toast('Add a sound first', { kind: 'info' }); return; }
   const c = cur, title = $('title').value.trim() || 'new mix';
   const btn = $('exBtn'), st = $('exStatus'), busy = $('exBusy');
   btn.disabled = true; st.textContent = ''; busy.hidden = false;
@@ -2220,7 +2248,7 @@ async function exportMix() {
     if (cur === c) st.textContent = where; else toast(`“${title}” was exported.`);
   } catch (e) {
     if (cur === c) st.textContent = 'The file couldn\'t be created. Try a shorter length.';
-    else toast('The export of “' + title + '” failed.');
+    else toast('The export of “' + title + '” failed.', { kind: 'warn' });
   }
   busy.hidden = true;
   btn.disabled = false;
@@ -2272,7 +2300,7 @@ $('relinkIn').onchange = async e => {
   const f = e.target.files[0]; e.target.value = '';
   const t = relinkTarget; relinkTarget = null;
   if (!f || !t || !cur || !cur.tracks.includes(t)) return;
-  if (!AUDIO_RE.test(f.name)) { toast('That is not an audio file.'); return; }
+  if (!AUDIO_RE.test(f.name)) { toast('That is not an audio file.', { kind: 'warn' }); return; }
   try {
     const ext = f.name.match(/\.[^.]+$/)[0].toLowerCase();
     const path = await freeName(DIR.sounds, f.name.slice(0, -ext.length), ext);
@@ -2296,7 +2324,7 @@ function sizeTitle() {
 $('titleEdit').innerHTML = ICO.pencil;
 $('titleEdit').onclick = () => { const el = $('title'); el.focus(); el.select(); };
 $('search').oninput = renderLibrary;
-$('rescan').onclick = async () => { await scanLibrary(); renderLibrary(); toast('Library refreshed'); };
+$('rescan').onclick = async () => { await scanLibrary(); renderLibrary(); toast('Your sounds refreshed', { kind: 'info' }); };
 $('exBtn').onclick = exportMix;
 document.querySelectorAll('#libTabs button').forEach(b => b.onclick = () => {
   document.querySelectorAll('#libTabs button').forEach(x => x.classList.toggle('on', x === b));
@@ -2502,7 +2530,7 @@ function closeImmersion() {
 }
 function toggleFullscreen() {
   if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-  else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => toast('Full screen isn\'t available here'));
+  else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => toast('Full screen isn\'t available here', { kind: 'warn' }));
 }
 // a library preview stops as soon as you click outside the list of results
 document.addEventListener('pointerdown', e => { if (pv && !e.target.closest('.libList')) stopPreview(); });
