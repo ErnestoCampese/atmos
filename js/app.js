@@ -1338,6 +1338,43 @@ function trackTest(t) {
   if (!progRAF) progRAF = requestAnimationFrame(progLoop);
 }
 
+/* ---------- segmented controls: the selection slides ----------
+   Each .seg holds one pill behind its choices. It is moved with a transform and takes the width
+   of the choice it lands on. A changed size (fonts loading, a panel resizing, a hidden row shown)
+   puts it in place without a slide; only a new choice slides it. */
+const segPill = seg => seg.querySelector(':scope>.seg-pill');
+function placePill(seg, slide) {
+  const pill = segPill(seg), on = seg.querySelector(':scope>button.on');
+  if (!pill || !on) return;
+  const x = on.offsetLeft, w = on.offsetWidth;
+  if (seg._x === x && seg._w === w) return;
+  if (seg._x === undefined) slide = false;
+  seg._x = x; seg._w = w;
+  if (!slide) pill.style.transition = 'none';
+  pill.style.width = w + 'px';
+  pill.style.transform = `translateX(${x}px)`;
+  if (!slide) { void pill.offsetWidth; pill.style.transition = ''; }
+}
+const segSizes = new ResizeObserver(es => es.forEach(e => placePill(e.target, false)));
+const watchSeg = seg => { segSizes.observe(seg); placePill(seg, false); };
+/* where a pill is on screen right now, mid-slide included, relative to its control */
+const pillAt = seg => {
+  const p = segPill(seg).getBoundingClientRect(), s = seg.getBoundingClientRect();
+  return { x: p.left - s.left - seg.clientLeft, w: p.width };
+};
+/* a rebuilt control starts its pill where the old one was, then slides it to the new choice */
+function slideFrom(seg, from) {
+  const pill = segPill(seg);
+  pill.style.transition = 'none';
+  pill.style.width = from.w + 'px';
+  pill.style.transform = `translateX(${from.x}px)`;
+  void pill.offsetWidth;
+  pill.style.transition = '';
+  seg._x = from.x; seg._w = from.w;
+  placePill(seg, true);
+}
+watchSeg($('viewSeg')); watchSeg($('libTabs'));
+
 /* ---------- sounds in the composition ---------- */
 const panLabel = v => { const n = Math.round(Math.abs(v) * 100); return n < 5 ? 'Centre' : (v < 0 ? 'Left ' : 'Right ') + n; };
 
@@ -1419,7 +1456,7 @@ function renderTrack(t) {
         <input type="range" class="pan" min="-100" max="100" value="${Math.round(t.pan * 100)}" aria-label="Position between left and right"></div>
     </div>
     <div class="mode">
-      <div class="seg" role="group" aria-label="How it plays">
+      <div class="seg" role="group" aria-label="How it plays"><i class="seg-pill" aria-hidden="true"></i>
         ${Object.entries(MODES).map(([m, label]) => `<button data-m="${m}" class="${t.mode === m ? 'on' : ''}"${m === 'random' ? ' title="Plays at random moments, as often as you choose"' : ''}>${label}</button>`).join('')}
       </div>
       ${{ loop: loopOpts, interval: intOpts, random: rndOpts }[t.mode]}
@@ -1557,7 +1594,10 @@ function renderTrack(t) {
     t.mode = b.dataset.m;
     if (t.mode === 'loop' && t.seamless && !t.loopBuf && t.buffer) t.loopBuf = makeSeamless(t.buffer, t.fade);
     if (playing) resetTrack(t, ctx.currentTime + 0.05);
+    // the row is rebuilt: the new pill starts where the old one is, so it slides instead of jumping
+    const from = pillAt(t.el.querySelector('.mode .seg'));
     replaceEl(t); markDirty();
+    slideFrom(t.el.querySelector('.mode .seg'), from);
   });
   if (t.mode === 'loop') {
     if (q('.cf')) q('.cf').onchange = e => { t.crossfade = e.target.checked; q('.fade').disabled = !t.crossfade; markDirty(); };
@@ -1584,10 +1624,12 @@ function renderTrack(t) {
   }
   if (effectiveGain(t) === 0) el.classList.add('off');
   paintRanges(el);
+  segSizes.observe(el.querySelector('.mode .seg'));
   return el;
 }
 function replaceEl(t) {
   if (!t.el) return;
+  segSizes.unobserve(t.el.querySelector('.mode .seg'));
   const n = renderTrack(t);
   if (focusT === t) { n.classList.add('focused'); t.el.removeEventListener('keydown', trapInTile); n.addEventListener('keydown', trapInTile); }
   t.el.replaceWith(n); t.el = n;
@@ -1627,6 +1669,7 @@ function setView(v) {
   unfocusTrack();
   $('list').classList.toggle('tiles', v === 'tiles');
   $('viewSeg').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  placePill($('viewSeg'), true);
   setTileFocus();
   try { localStorage.setItem('atmos-view', v); } catch (e) {}
 }
@@ -2257,6 +2300,7 @@ $('rescan').onclick = async () => { await scanLibrary(); renderLibrary(); toast(
 $('exBtn').onclick = exportMix;
 document.querySelectorAll('#libTabs button').forEach(b => b.onclick = () => {
   document.querySelectorAll('#libTabs button').forEach(x => x.classList.toggle('on', x === b));
+  placePill($('libTabs'), true);
   $('paneMine').hidden = b.dataset.tab !== 'mine';
   $('paneFs').hidden = b.dataset.tab !== 'fs';
   if (b.dataset.tab === 'fs' && fsKey) $('fsQ').focus();

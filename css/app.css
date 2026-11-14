@@ -437,11 +437,14 @@ a.icon{text-decoration:none}
 /* The segmented control: one row of choices, one of them selected. Every switch of this kind uses
    it, with the same states everywhere. A 40 px track holding 32 px choices. Three words in a row
    need more air than a one-word chip does, so these get 16 px either side rather than the chip's 12. */
-.seg{display:inline-flex;background:var(--raise);border:1px solid var(--ctl);border-radius:var(--r-sm);padding:3px;height:40px}
-.seg button{border:0;background:transparent;border-radius:var(--r-ctl);padding:0 var(--s4);font-size:13px;font-weight:600;color:var(--text2);transition:color .12s,background .12s}
+.seg{--slide:.2s cubic-bezier(.22,.8,.3,1);position:relative;display:inline-flex;background:var(--raise);border:1px solid var(--ctl);border-radius:var(--r-sm);padding:3px;height:40px}
+.seg button{position:relative;z-index:1;border:0;background:transparent;border-radius:var(--r-ctl);padding:0 var(--s4);font-size:13px;font-weight:600;color:var(--text2);transition:color var(--slide),background .12s}
 .seg button:hover:not(.on){color:var(--text);background:color-mix(in srgb,var(--surface) 70%,transparent)}
 .seg button:active:not(.on){background:var(--line)}
-.seg button.on{background:var(--surface);color:var(--text);box-shadow:0 1px 2px var(--shadow)}
+.seg button.on{color:var(--text)}
+/* the selection is one pill behind the choices, which slides to the chosen one (placed by the script) */
+.seg-pill{position:absolute;top:3px;bottom:3px;left:0;width:0;border-radius:var(--r-ctl);background:var(--surface);box-shadow:0 1px 2px var(--shadow);
+  pointer-events:none;transition:transform var(--slide),width var(--slide)}
 /* the same control across the full width, in equal shares */
 .seg.fill{display:flex}
 .seg.fill button{flex:1}
@@ -732,5 +735,6 @@ input[type=range].imm-vol::-moz-range-thumb{width:14px;height:14px;border:0;back
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}
   .sky .depth{transition:none;transform:none!important}
   .name{transition:none}
+  .seg-pill{transition:none}
   .imm-blur,.imm-bg,.imm canvas{translate:none!important}
 }
