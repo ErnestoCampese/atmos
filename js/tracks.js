@@ -47,7 +47,9 @@ watchSeg($('homeTabs')); watchSeg($('libTabs'));
 /* where it is, in words like the effects: nobody has to know what "x 40, y -70" sounds like */
 const DIRS = ['Ahead', 'Ahead right', 'Right', 'Behind right', 'Behind', 'Behind left', 'Left', 'Ahead left'];
 const posLabel = t => {
-  const r = Math.hypot(t.pos.x, t.pos.y), h = t.height || 0;
+  const r = Math.hypot(t.pos.x, t.pos.y);
+  // a sound that rises or comes down past you goes through every height: it has none of its own to say
+  const h = passing(t) && (t.trajDir === 'up' || t.trajDir === 'down') && !t.trajRand ? 0 : t.height || 0;
   const up = h > 0 ? 'above' : h < 0 ? 'below' : '';
   // left on the listener, a sound that moves still has a path: the one drawn on the grid, close by
   if (r < 0.05) return wandering(t) ? ['Close around you', up].filter(Boolean).join(' · ') : passing(t) ? ['Close by', up].filter(Boolean).join(' · ')
@@ -70,31 +72,34 @@ const muteIcon = on => on ? ICO.volX : ICO.vol;
 /* How much of an effect, chosen among its words: each word is a set amount. An amount saved earlier
    that lies between two words shows the nearer one and keeps sounding as it is until another is chosen. */
 const AMOUNTS = [[0, 'Off'], [22, 'A little'], [50, 'Medium'], [80, 'Strong']];
-/* Two effects are told by what they resemble, not by how much: what stands between you and the sound, and what it
-   is played on */
-const THROUGH = [[0, 'Off'], [30, 'A curtain'], [62, 'A window'], [78, 'A wall'], [90, 'Water']];
-const PLAYED = [[0, 'Off'], [55, 'A radio'], [90, 'A telephone']];
-const amountsOf = k => k === 'muffled' ? THROUGH : k === 'thin' ? PLAYED : AMOUNTS;
+/* One effect is told by what it resembles, not by how much: what stands between you and the sound */
+const THROUGH = [[0, 'Off'], [30, 'Curtain'], [62, 'Window'], [78, 'Wall'], [90, 'Underwater']];
+const amountsOf = k => k === 'muffled' ? THROUGH : AMOUNTS;
 const amountAt = (k, v) => { if (!v) return 0; const a = amountsOf(k); let at = 1; for (let i = 2; i < a.length; i++) if (Math.abs(a[i][0] - v) < Math.abs(a[at][0] - v)) at = i; return at; };
-/* What each effect does. The space has a choice of its own (which space): its sentence ends in that choice once the
-   effect is on; while it is off the sentence ends in plain words: [start, on, off] */
-const FX_SAY = { reverb: ['Lingers after it stops, as in', '', ' a hall or a cave'] };
+/* What each effect does. The space has a choice of its own (which place): its sentence is that choice, there whether
+   the effect is on or off, and then what the chosen place sounds like and the scenes it is for; choosing one turns
+   the effect on */
+const FX_SAY = { reverb: 'As in' };
 const FX_TEXT = {
-  echo: 'Repeats that bounce left and right and slowly die away',
   muffled: 'Dulled, as when something stands between you and the sound',
-  thin: 'Small and thin, as out of a little speaker',
+  under: 'Dull and ringing, swaying slowly, as with your head underwater',
   waves: 'Slowly louder and softer on its own, like breathing'
 };
 /* How it moves: it stays, it wanders around its place all the time, or it passes by each time it plays */
 const MOVES = [['still', 'Stays where it is'], ['little', 'Wanders a little'], ['wide', 'Wanders widely'], ['round', 'Circles around you'],
-  ['lr', 'Passes by, left to right'], ['rl', 'Passes by, right to left'], ['pp', 'Passes by, back and forth'], ['rand', 'Passes by, either way']];
+  ['lr', 'Passes by, left to right'], ['rl', 'Passes by, right to left'], ['pp', 'Passes by, back and forth'], ['rand', 'Passes by, either way'],
+  ['up', 'Passes by, from below to above'], ['down', 'Passes by, from above to below']];
 const WANDER = { little: 22, wide: 50, round: 80 };
 const moveOf = t => passing(t) ? (t.trajRand ? 'rand' : t.trajDir) : wanderKind(wandering(t)) || 'still';
 const moveSay = t => {
   const m = moveOf(t);
   const say = m === 'still' ? 'It keeps to the place you gave it' : m === 'little' ? 'Drifts slowly to either side of its place, all the time'
     : m === 'wide' ? 'Drifts slowly, far to either side of its place' : m === 'round' ? 'Goes slowly all the way around you, again and again'
-    : 'Each time it plays it comes from far off, passes through its place and goes';
+    : m === 'up' ? 'Each time it plays it rises past you: under you as it starts, over you as it ends'
+    : m === 'down' ? 'Each time it plays it comes down past you: over you as it starts, under you as it ends'
+    : m === 'pp' ? 'Each time it plays it goes around you from one side to the other, then back the next time'
+    : m === 'rand' ? 'Each time it plays it goes around you from one side to the other, whichever way it happens'
+    : `Each time it plays it goes around you: on your ${m === 'lr' ? 'left' : 'right'} as it starts, on your ${m === 'lr' ? 'right' : 'left'} as it ends`;
   return say;
 };
 /* where it is: the listener in the middle of a grid, seen from behind, the sound a dot dragged around them. Ahead is
@@ -109,8 +114,37 @@ const PAD_FIG = `<svg class="pad-fig" viewBox="0 0 ${PAD} ${PAD}" aria-hidden="t
   <path class="pf-move" d=""/><path class="pf-head" d=""/>
   <g class="pf-you" transform="translate(${PAD_C} ${PAD_C}) scale(.64) translate(-100 -62)"><path d="M86 53a4 6 0 0 0 0 11M114 53a4 6 0 0 1 0 11M70 96c1-8 12-12 24-14v-8M130 96c-1-8-12-12-24-14v-8"/><ellipse cx="100" cy="58" rx="14" ry="17"/></g>
   <g class="pf-dot"><circle r="8"/><circle r="3.5"/></g>
+  <circle class="pf-live" r="4"/>
 </svg>`;
 const HEIGHTS = [[-1, 'Below'], [0, 'Level'], [1, 'Above']];
+/* A sound that moves is shown where it is at this moment, while it is heard: a small gold point travelling along the
+   path drawn on the grid (gold, because it is what is sounding now). The dot stays where it was put: it is the place
+   the writer chose, and still the thing to drag. `h` is the play being heard now, if any. */
+function paintLive(t, now, h) {
+  const el = t.el, live = t.fxOpen && el && el.querySelector('.pf-live'); if (!live) return;
+  const x = t.pos.x, y = t.pos.y, r = Math.hypot(x, y), m = moveOf(t);
+  let at = null;
+  if (h && (t.pv || effectiveGain(t) > 0) && m !== 'still') {
+    if (m in WANDER) {
+      // it turns around the listener: the same slow wave the engine runs, read at this moment
+      const mv = t.nodes && t.nodes.mv;
+      if (mv && mv.on) {
+        const ph = 2 * Math.PI * LAP * (now - mv.t0), a = (r < 0.01 ? 0 : Math.atan2(x, y)) + (m === 'round' ? ph : SWAY[m] * Math.sin(ph));
+        const R = Math.max(r, 0.3) * PAD_R; at = [PAD_C + R * Math.sin(a), PAD_C - R * Math.cos(a)];
+      }
+    } else if (h.pass) {
+      // it passes by: how far along this crossing it is, by the clock of the sound itself
+      const ps = h.pass, i = Math.floor((now - ps.when) / ps.each), c = ps.list[i];
+      if (c) {
+        const v = (((now - ps.when) / ps.each - i) * 2 - 1) * c.k;
+        if (c.dir === 'up' || c.dir === 'down') at = [PAD_C + x * PAD_R, PAD_C - y * PAD_R - (c.dir === 'up' ? v : -v) * 18];
+        else { const a = (c.dir === 'lr' ? v : -v) * Math.PI / 2, R = Math.min(PAD_C - 10, Math.max(r, 0.15) * PAD_R); at = [PAD_C + R * Math.sin(a), PAD_C - (y >= 0 ? 1 : -1) * R * Math.cos(a)]; }
+      }
+    }
+  }
+  if (at) live.setAttribute('transform', `translate(${at[0].toFixed(1)} ${at[1].toFixed(1)})`);
+  live.classList.toggle('on', !!at);
+}
 function paintPad(t, el = t.el) {
   const pad = el && el.querySelector('.pad'); if (!pad) return;
   const X = v => (PAD_C + v * PAD_R).toFixed(1), Y = v => (PAD_C - v * PAD_R).toFixed(1);
@@ -123,12 +157,20 @@ function paintPad(t, el = t.el) {
     const R = Math.max(r, 0.3) * PAD_R, th = r < 0.01 ? 0 : Math.atan2(x, y), A = m === 'round' ? Math.PI : SWAY[m];
     const at = a => `${(PAD_C + R * Math.sin(a)).toFixed(1)} ${(PAD_C - R * Math.cos(a)).toFixed(1)}`;
     d = m === 'round' ? `M${at(0)}A${R} ${R} 0 1 1 ${at(Math.PI)}A${R} ${R} 0 1 1 ${at(0)}` : `M${at(th - A)}A${R} ${R} 0 0 1 ${at(th + A)}`;
+  } else if (m === 'up' || m === 'down') {
+    // rising or coming down cannot be drawn from above: an arrow through the dot says which
+    const px = +X(x), py = +Y(y), a = py + 18, b = py - 18;
+    d = `M${px} ${a}V${b}`; heads = m === 'up' ? `M${px - 4} ${b + 6}l4-6 4 6` : `M${px - 4} ${a - 6}l4 6 4-6`;
   } else if (m !== 'still') {
-    // the line it passes along, with a head at each end it travels to
-    const yy = Y(Math.abs(y) < 0.15 ? (y < 0 ? -0.15 : 0.15) : y), a = 8, b = PAD - 8;
-    d = `M${a} ${yy}H${b}`; heads = (m !== 'rl' ? `M${b - 6} ${yy - 4}l6 4-6 4` : '') + (m !== 'lr' ? `M${a + 6} ${yy - 4}l-6 4 6 4` : '');
+    // the half circle it goes along, ahead of the listener or behind, with a head at each end it travels to
+    const R = Math.min(PAD_C - 10, Math.max(r, 0.15) * PAD_R), a = PAD_C - R, b = PAD_C + R, up = y >= 0, k = up ? 6 : -6;
+    d = `M${a} ${PAD_C}A${R} ${R} 0 0 ${up ? 1 : 0} ${b} ${PAD_C}`;
+    heads = (m !== 'rl' ? `M${b - 4} ${PAD_C - k}l4 ${k} 4 ${-k}` : '') + (m !== 'lr' ? `M${a - 4} ${PAD_C - k}l4 ${k} 4 ${-k}` : '');
   }
   pad.querySelector('.pf-move').setAttribute('d', d); pad.querySelector('.pf-head').setAttribute('d', heads);
+  // and its height stands aside, like any control that has nothing to set
+  const hgt = el.querySelector('.hgt'), idle = m === 'up' || m === 'down';
+  hgt.classList.toggle('is-idle', idle); hgt.querySelectorAll('button').forEach(b => { b.disabled = idle; });
   pad.setAttribute('aria-valuetext', say);
   el.querySelector('.pos-say').textContent = say;
 }
@@ -173,16 +215,14 @@ function renderTrack(t) {
       </select>
     </div>
     ${varyOpts}`;
-  const options = (obj, sel, label = v => v.label) => Object.entries(obj).map(([v, o]) => `<option value="${v}" ${sel === v ? 'selected' : ''}>${label(o)}</option>`).join('');
-  const revKind = `<select class="kind revtype" aria-label="Kind of space">${options(SPACES, t.revType, o => 'a ' + o.label.toLowerCase())}</select>`;
+  const revKind = `<select class="kind revtype" aria-label="Which place">${Object.entries(SPACE_GROUPS).map(([g, name]) =>
+    `<optgroup label="${name}">${Object.entries(SPACES).filter(([, o]) => o.group === g).map(([v, o]) => `<option value="${v}" ${t.revType === v ? 'selected' : ''}>${o.label}</option>`).join('')}</optgroup>`).join('')}</select>`;
   /* a line of the table: the name, the control right beside it, then what it does. Most effects are an amount in
-     words; the echo is a slider; how it moves is a choice among sentences */
+     words; how it moves is a choice among sentences */
   const fxRow = ([k, label]) => {
     const v = t.fx[k] || 0, by = `aria-labelledby="${did}-${k}"`;
-    let on = v > 0, ctl, hint = esc(FX_TEXT[k] || '');
-    if (k === 'echo') {
-      ctl = `<div class="fx-slide"><input type="range" class="echo" min="0" max="100" value="${v}" ${by} aria-valuetext="${fxWord(v)}"><span class="val ev">${fxWord(v)}</span></div>`;
-    } else if (k === 'movement') {
+    let on = v > 0, ctl, hint = esc(FX_TEXT[k === 'muffled' && v / 100 >= UNDERWATER ? 'under' : k] || '');
+    if (k === 'movement') {
       const m = moveOf(t); on = m !== 'still';
       // a seamless loop never starts again, so it cannot pass by: those ways stay in the list, set aside under the reason
       const opt = ([id, l]) => `<option value="${id}" ${m === id ? 'selected' : ''}>${l}</option>`, idle = noPassing(t);
@@ -192,7 +232,7 @@ function renderTrack(t) {
       const at = amountAt(k, v), say = FX_SAY[k];
       ctl = `<div class="seg fill fx-amt" role="radiogroup" ${by} data-k="${k}"><span class="seg-pill" aria-hidden="true"></span>${amountsOf(k).map(([a, w], i) =>
         `<button type="button" role="radio" aria-checked="${i === at}" tabindex="${i === at ? 0 : -1}" data-v="${a}"${i === at ? ' class="on"' : ''}>${w}</button>`).join('')}</div>`;
-      if (say) hint = `${esc(say[0])}<span class="fx-kind">${esc(say[1])} ${revKind}</span><span class="fx-rest">${esc(say[2])}</span>`;
+      if (say) hint = `${esc(say)} ${revKind} <span class="sp-say">${esc((SPACES[t.revType] || SPACES.cathedral).say)}</span>`;
     }
     return `
             <div class="fx-row${on ? ' is-on' : ''}" data-fx="${k}">
@@ -297,13 +337,13 @@ function renderTrack(t) {
     if (t.pv) t.pv.g.gain.setTargetAtTime(t.volume, ctx.currentTime, 0.05);
     refreshGains(); markDirty();
   };
-  q('.revtype').onchange = e => { t.revType = e.target.value; setReverbType(t); markDirty(); };
-  const rowOn = (k, on) => q(`.fx-row[data-fx="${k}"]`).classList.toggle('is-on', on);
-  q('.echo').oninput = e => {
-    t.fx.echo = +e.target.value; const w = fxWord(t.fx.echo);
-    e.target.setAttribute('aria-valuetext', w); q('.ev').textContent = w; rowOn('echo', t.fx.echo > 0);
-    applyFx(t); setOpener(t); markDirty();
+  // choosing a place means wanting to hear it: an effect that was off comes on, at its middle amount
+  q('.revtype').onchange = e => {
+    t.revType = e.target.value; setReverbType(t); markDirty();
+    q('.sp-say').textContent = SPACES[t.revType].say;
+    if (!t.fx.reverb) { t.fx.reverb = 50; applyFx(t); replaceEl(t); t.el.querySelector('.revtype').focus(); }
   };
+  const rowOn = (k, on) => q(`.fx-row[data-fx="${k}"]`).classList.toggle('is-on', on);
   /* how it moves: one choice sets the two amounts behind it. The sound starts again, on its own or in the
      composition, so the new way of moving is heard at once and nothing still playing keeps the old one */
   q('.moves').onchange = e => {
@@ -323,6 +363,8 @@ function renderTrack(t) {
       seg.closest('.fx-row').classList.toggle('is-on', t.fx[k] > 0);
       placePill(seg, true);
       if (focus) b.focus();
+      // what the effect does is said again when the word chosen changes what it is (underwater is not a thicker wall)
+      if (k === 'muffled') seg.closest('.fx-row').querySelector('.fx-hint').textContent = FX_TEXT[t.fx[k] / 100 >= UNDERWATER ? 'under' : k];
       applyFx(t); setOpener(t); markDirty();
     };
     bs.forEach(b => b.onclick = () => { if (!b.classList.contains('on')) choose(b); });

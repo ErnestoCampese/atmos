@@ -42,39 +42,61 @@ function effectiveGain(t) {
   return t.volume;
 }
 /* ---------- effects ---------- */
-/* The lines of the table. "How it moves" holds two saved amounts: `movement` (it wanders around its place, all the
+/* The lines of the table. ("Echo" is gone: an echo belongs to a place, and the spaces carry it now. A file that has an
+   amount of it keeps it, unused.) "How it moves" holds two saved amounts: `movement` (it wanders around its place, all the
    time) and `trajectory` (it passes by, each time it plays); only one of them is ever at work. */
 const FILTERS = [
   ['reverb', 'Space'],
-  ['echo', 'Echo'],
-  ['muffled', 'Heard through'],
-  ['thin', 'Played on'],
+  ['muffled', 'Behind a'],
   ['waves', 'Rise and fall'],
   ['movement', 'How it moves']
 ];
 /* Words instead of percentages: you do not have to know what 42% of a reverb sounds like. */
 const fxWord = v => v === 0 ? 'Off' : v < 34 ? 'A little' : v < 67 ? 'Medium' : 'Strong';
-/* Reverb spaces. rt = seconds for the tail to die away completely,
-   pre = delay before the tail, dark = how much sooner the highs die away (rock walls),
-   er = close early reflections (nearby walls). */
-// the three kinds of echo are no longer offered: every echo comes back after the same time. The names stay, for the files that carry them
-const ECHOES = { near: 1, valley: 1, mountain: 1 }, ECHO_TIME = 0.42;
+/* Spaces: what a place gives back of a sound. Each is drawn as the answer of that place to one clap (an "impulse
+   response"), made of up to four things:
+   - the tail: countless reflections fused into a wash that dies away. rt = seconds for it to die away completely,
+     pre = the silence before it, dark = how much sooner its highs die than its lows (rock, earth, leaves),
+     tail = how much of it there is (1 in a closed place, little under an open sky);
+   - er: a few reflections off the nearest walls, in the first 80 ms;
+   - flutter: the sound thrown back and forth between two facing walls, every `every` seconds, each time `keep` of
+     the time before, starting at `g`;
+   - echoes: whole returns of the sound from far walls, [seconds, how loud, which side (-1 left, 1 right), how blurred
+     in ms]; scatter: many faint ones at random, as off the trunks of a wood.
+   `group` is where it stands in the list. The labels are said after "As in"; `say` is what the writer reads beside
+   the choice: what the place sounds like, then the scenes it is for. */
+// the three kinds of echo are no longer offered. The names stay, for the files that carry them
+const ECHOES = { near: 1, valley: 1, mountain: 1 };
+const SPACE_GROUPS = { in: 'Indoors', under: 'Under ground', out: 'Outdoors' };
 const SPACES = {
-  room:      { label: 'Room',      rt: 1.2, pre: 0.008, dark: 0.45, er: 6 },
-  hall:      { label: 'Hall',      rt: 2.6, pre: 0.025, dark: 0.35, er: 4 },
-  cathedral: { label: 'Cathedral', rt: 6.5, pre: 0.060, dark: 0.25, er: 3 },
-  cave:      { label: 'Cave',      rt: 4.5, pre: 0.012, dark: 0.75, er: 14 }
+  room:      { group: 'in',    label: 'a room', say: 'A short ring, close around you: a bedroom, a study, a cabin',          rt: 0.5, pre: 0.004, dark: 0.50, er: 6 },
+  bigroom:   { group: 'in',    label: 'a large room', say: 'A fuller ring, about a second long: a tavern, a parlour, a schoolroom',    rt: 1.1, pre: 0.008, dark: 0.45, er: 6 },
+  hall:      { group: 'in',    label: 'a great hall', say: 'Wide and soft, and it lingers: a castle hall, a station, a ballroom',    rt: 2.6, pre: 0.025, dark: 0.35, er: 4 },
+  cathedral: { group: 'in',    label: 'a cathedral', say: 'It rings on and on, filling the air: a church, a temple, a great nave',     rt: 6.5, pre: 0.060, dark: 0.25, er: 3 },
+  corridor:  { group: 'in',    label: 'a corridor', say: 'Quick rebounds between two walls: a passage, a stairwell, a prison',      rt: 1.4, pre: 0.006, dark: 0.30, er: 4, tail: 0.7, flutter: { every: 0.024, keep: 0.82, n: 22, g: 0.5 } },
+  cellar:    { group: 'under', label: 'a cellar', say: 'Short, dark and close: a cellar, a crypt, a dungeon',        rt: 1.0, pre: 0.005, dark: 0.85, er: 12 },
+  cave:      { group: 'under', label: 'a cave', say: 'Long and dark, off the rock all around: caves and caverns',          rt: 4.5, pre: 0.012, dark: 0.75, er: 14 },
+  tunnel:    { group: 'under', label: 'a tunnel', say: 'Long, with a rebound that keeps coming: a mine, a sewer, an underpass',        rt: 3.2, pre: 0.010, dark: 0.55, er: 8, tail: 0.75, flutter: { every: 0.041, keep: 0.88, n: 40, g: 0.42 } },
+  street:    { group: 'out',   label: 'a narrow street', say: 'Dry rebounds that die at once: an alley, a village lane', rt: 0.6, pre: 0.012, dark: 0.30, er: 3, tail: 0.35, flutter: { every: 0.036, keep: 0.72, n: 12, g: 0.7 } },
+  square:    { group: 'out',   label: 'a town square', say: 'Two or three quick returns off the housefronts: a square, a courtyard, a market',   rt: 1.3, pre: 0.030, dark: 0.40, er: 2, tail: 0.35, echoes: [[0.16, 0.45, -0.6, 3], [0.23, 0.35, 0.7, 4], [0.37, 0.2, -0.2, 6]] },
+  forest:    { group: 'out',   label: 'a forest', say: 'Soft and short, with no clear echo: a wood, a thick garden',        rt: 0.9, pre: 0.020, dark: 0.70, er: 0, tail: 0.6, scatter: { n: 14, from: 0.03, to: 0.28, g: 0.25 } },
+  canyon:    { group: 'out',   label: 'a canyon', say: 'Five echoes close together, from one side then the other: a gorge, a quarry',        rt: 2.8, pre: 0.080, dark: 0.50, er: 2, tail: 0.35, echoes: [[0.42, 0.55, 0.7, 3], [0.8, 0.4, -0.7, 5], [1.2, 0.28, 0.5, 7], [1.62, 0.19, -0.4, 9], [2.05, 0.12, 0.3, 11]] },
+  mountains: { group: 'out',   label: 'the mountains', say: 'A silence, then three or four far echoes, each one fainter: a shout from the peaks, a high valley',   rt: 3.6, pre: 0.250, dark: 0.60, er: 0, tail: 0.15, echoes: [[0.95, 0.5, -0.7, 5], [1.75, 0.32, 0.8, 8], [2.7, 0.19, -0.3, 12], [3.4, 0.11, 0.5, 15]] }
 };
 const irCache = new Map();
 function impulse(context, type = 'cathedral') {
   const sp = SPACES[type] || SPACES.cathedral, sr = context.sampleRate, key = sr + type;
   if (irCache.has(key)) return irCache.get(key);
-  const pre = Math.round(sp.pre * sr), len = pre + Math.round(sp.rt * 1.05 * sr);
+  const pre = Math.round(sp.pre * sr), far = sp.echoes ? sp.echoes[sp.echoes.length - 1][0] + 0.4 : 0;
+  const tailLen = Math.round(sp.rt * 1.05 * sr), len = pre + Math.max(tailLen, Math.round(far * sr));
   const b = new AudioBuffer({ length: len, numberOfChannels: 2, sampleRate: sr });
+  const ch = [b.getChannelData(0), b.getChannelData(1)];
+  // the tail, with the nearest walls in it
+  let energy = 0;
   for (let c = 0; c < 2; c++) {
-    const d = b.getChannelData(c);
-    let y = 0, energy = 0;
-    for (let i = pre; i < len; i++) {
+    const d = ch[c];
+    let y = 0;
+    for (let i = pre; i < pre + tailLen; i++) {
       const x = (i - pre) / sr;
       const env = Math.exp(-6.9 * x / sp.rt);                       // -60 dB at the end of the tail
       const k = Math.max(0.04, 0.9 - sp.dark * 0.85 * (x / sp.rt) - sp.dark * 0.1); // highs die away before lows
@@ -87,9 +109,27 @@ function impulse(context, type = 'cathedral') {
       if (at < len) d[at] += (Math.random() < 0.5 ? -1 : 1) * (0.5 + Math.random() * 0.5) * (1 - r / (sp.er + 1));
     }
     for (let i = 0; i < len; i++) energy += d[i] * d[i];
-    const norm = 1 / Math.sqrt(energy || 1);                         // predictable tail volume
-    for (let i = 0; i < len; i++) d[i] *= norm;
   }
+  // predictable tail volume: as loud as the sound that made it in a closed place, less under an open sky.
+  // The two ears together, so nothing that comes from one side is evened out
+  const norm = (sp.tail === undefined ? 1 : sp.tail) / Math.sqrt(energy / 2 || 1);
+  for (let c = 0; c < 2; c++) for (let i = 0; i < len; i++) ch[c][i] *= norm;
+  /* one return of the sound: a short blurred burst (a wall is rough, it does not answer with a click), as loud as
+     `g`, more on one side than the other, the far ear a moment later; the more blurred, the duller */
+  const back = (sec, g, side, blur) => {
+    const n = Math.max(2, Math.round(blur / 1000 * sr)), k = Math.max(0.15, Math.min(0.9, 0.9 - blur * 0.05));
+    for (let c = 0; c < 2; c++) {
+      const farEar = (side < 0) === (c === 1), at = pre + Math.round((sec + (farEar ? 0.0006 * Math.abs(side) : 0)) * sr);
+      const lvl = g * Math.SQRT2 * Math.sqrt((1 + (c ? side : -side)) / 2), burst = new Float32Array(n);
+      let y = 0, e = 0;
+      for (let j = 0; j < n; j++) { y += k * ((j ? Math.random() * 2 - 1 : 1) * Math.exp(-4 * j / n) - y); burst[j] = y; e += y * y; }
+      const s = lvl / Math.sqrt(e || 1);
+      for (let j = 0; j < n && at + j < len; j++) ch[c][at + j] += burst[j] * s;
+    }
+  };
+  if (sp.flutter) for (let i = 0; i < sp.flutter.n; i++) back(sp.flutter.every * (i + 1), sp.flutter.g * Math.pow(sp.flutter.keep, i), i % 2 ? 0.8 : -0.8, 1 + i * 0.3);
+  if (sp.scatter) for (let i = 0; i < sp.scatter.n; i++) { const u = Math.random(); back(sp.scatter.from + u * (sp.scatter.to - sp.scatter.from), sp.scatter.g * (1 - 0.7 * u), Math.random() * 2 - 1, 3 + u * 6); }
+  if (sp.echoes) sp.echoes.forEach(e => back(...e));
   irCache.set(key, b); return b;
 }
 function setReverbType(t, n = t.nodes, context = ctx) {
@@ -99,32 +139,20 @@ function setReverbType(t, n = t.nodes, context = ctx) {
   const old = n.conv; n.conv = conv;
   if (old) { try { n.revSend.disconnect(old); } catch (e) {} setTimeout(() => { try { old.disconnect(); } catch (e) {} }, 300); }
 }
-// "ping-pong" echo: left → right → left…, each repeat a little darker and quieter
-function wireEcho(n, context) {
-  n.dL = context.createDelay(3); n.dR = context.createDelay(3);
-  n.dampL = context.createBiquadFilter(); n.dampL.type = 'lowpass'; n.dampL.frequency.value = 3200;
-  n.dampR = context.createBiquadFilter(); n.dampR.type = 'lowpass'; n.dampR.frequency.value = 3200;
-  n.fbL = context.createGain(); n.fbR = context.createGain();
-  n.echoMerge = context.createChannelMerger(2);
-  n.dlSend.connect(n.dL);
-  n.dL.connect(n.dampL); n.dampL.connect(n.fbL); n.fbL.connect(n.dR);
-  n.dR.connect(n.dampR); n.dampR.connect(n.fbR); n.fbR.connect(n.dL);
-  n.dL.connect(n.echoMerge, 0, 0); n.dR.connect(n.echoMerge, 0, 1); n.echoMerge.connect(n.tail);
-}
-/* Stopping by hand means silence: the echo still travelling and the space still ringing are cut short too.
+/* Stopping by hand means silence: the space still ringing is cut short too.
    Only where the writer presses stop (the composition's button, or a sound's own): a sound that ends by itself
-   keeps its echo and its tail, which is the whole point of them. The old lines are thrown away and new, empty
-   ones take their place, so nothing of what was cut comes back at the next play. `silent`: nothing can be heard
-   at this moment (the whole mix has already faded), so the old lines go at once; otherwise they fade for an instant. */
+   keeps its tail, which is the whole point of it. The old line is thrown away and a new, empty one takes its
+   place, so nothing of what was cut comes back at the next play. `silent`: nothing can be heard at this moment
+   (the whole mix has already faded), so the old line goes at once; otherwise it fades for an instant. */
 function cutTails(t, silent) {
   const n = t.nodes; if (!n || !n.tail) return;
-  const old = { tail: n.tail, conv: n.conv, fbL: n.fbL, fbR: n.fbR };
-  try { n.revSend.disconnect(n.conv); n.dlSend.disconnect(n.dL); } catch (e) {}
-  const drop = () => { try { old.tail.disconnect(); old.conv.disconnect(); old.fbL.disconnect(); old.fbR.disconnect(); } catch (e) {} };
+  const old = { tail: n.tail, conv: n.conv };
+  try { n.revSend.disconnect(n.conv); } catch (e) {}
+  const drop = () => { try { old.tail.disconnect(); old.conv.disconnect(); } catch (e) {} };
   if (silent) drop(); else { old.tail.gain.setTargetAtTime(0, ctx.currentTime, 0.012); setTimeout(drop, 150); }
   n.tail = ctx.createGain(); n.tail.connect(n.out);
   n.conv = null; setReverbType(t);
-  wireEcho(n, ctx); applyFx(t, n, ctx, true);
+  applyFx(t, n, ctx, true);
 }
 /* ---------- where a sound is ----------
    A sound is placed around the listener's head: to the left or right, ahead or behind, near or far, above or below.
@@ -144,15 +172,15 @@ const ROLLOFF = 0.93;    // the edge of the grid is 10 dB quieter than close by,
 const HRTF_GAIN = 2;     // the binaural panner comes out about 5 dB quieter than the sound that went in, more for a wide recording
 const ELEV = 55 * Math.PI / 180;
 const LAP = 1 / 12;      // a sound that wanders goes and comes back in 12 seconds, or goes once round
-const PASS = 12;         // a long sound passes by again and again, each crossing about this many seconds
-const EDGE = 1.2;        // and fades in and out at the far ends of each crossing, where it turns back unheard
+const EDGE = 0.3;        // a sound heard on its own starts again where it began: it dips for this long, so the way back is unheard
+const RISE = 70 * Math.PI / 180;   // from below to above: this far under and over the level of the ears
 const distGain = d => NEAR / (NEAR + ROLLOFF * (Math.max(d, NEAR) - NEAR));
 /* "Passing by" moves the sound across each time it plays. A seamless loop never plays again, so there is nothing
    to pass: the effect is left out of it, its amount kept for when the loop is no longer seamless. */
 const noPassing = t => t.mode === 'loop' && t.seamless;
 const passing = t => (t.fx.trajectory || 0) > 0 && !noPassing(t);
 const wandering = t => passing(t) ? 0 : (t.fx.movement || 0);
-const fxCount = t => ['reverb', 'echo', 'muffled', 'thin', 'waves'].filter(k => t.fx[k] > 0).length + (passing(t) || wandering(t) ? 1 : 0);
+const fxCount = t => ['reverb', 'muffled', 'waves'].filter(k => t.fx[k] > 0).length + (passing(t) || wandering(t) ? 1 : 0);
 /* where the sound is, in metres around the head: x to the right, y up, z behind (the browser's own axes).
    `s` is how much of a point it is: 0 all around you, 1 a point in a place. */
 function placeOf(t) {
@@ -173,6 +201,9 @@ const binaural = context => {
 };
 /* front from back, in tone: above 3 kHz a sound ahead is a little brighter, one behind a good deal duller (in dB: +3 to -8) */
 const rearGain = b => b < 0 ? -3 * b : -8 * b;
+const UNDERWATER = 0.85;  // from this much of "Behind a", the sound is underwater
+/* below from above, in tone: over 7 kHz a sound above is brighter, one below darker (in dB: -8 to +5) */
+const liftGain = l => l > 0 ? 5 * l : 8 * l;
 /* the first reflections of a room, for both ears: a few short taps in the first 60 ms, each from its own side (the
    far ear gets it a moment later and weaker), each a little duller than the one before */
 const roomCache = new Map();
@@ -199,16 +230,14 @@ function buildChain(t, context, dest) {
   const n = {};
   n.gain = context.createGain(); n.gain.gain.value = effectiveGain(t);
   n.lp = context.createBiquadFilter(); n.lp.type = 'lowpass'; n.lp.Q.value = 0.5;
-  n.hp = context.createBiquadFilter(); n.hp.type = 'highpass'; n.hp.Q.value = 0.5;
   n.trem = context.createGain();
   n.dry = context.createGain();
   n.revSend = context.createGain();
-  n.dlSend = context.createGain();
   n.out = context.createGain();
-  // what rings on after the sound (its space and its echo) leaves through one gate, so it can be cut short.
+  // what rings on after the sound (its space) leaves through one gate, so it can be cut short.
   // It is not placed: a space is all around, and that is what makes the placed sound seem to be out there in it
   n.tail = context.createGain(); n.tail.connect(n.out);
-  n.gain.connect(n.lp); n.lp.connect(n.hp); n.hp.connect(n.trem);
+  n.gain.connect(n.lp); n.lp.connect(n.trem);
   n.trem.connect(n.dry);
   // the sound itself goes two ways, mixed by where it is: as it is (all around you), and as a point in a place
   n.wide = context.createGain(); n.dry.connect(n.wide); n.wide.connect(n.out);
@@ -221,7 +250,6 @@ function buildChain(t, context, dest) {
   n.room = context.createGain(); n.roomConv = context.createConvolver(); n.roomConv.normalize = false; n.roomConv.buffer = firstReflections(context);
   n.rear.connect(n.room); n.room.connect(n.roomConv); n.roomConv.connect(n.out);
   n.trem.connect(n.revSend); setReverbType(t, n, context);
-  n.trem.connect(n.dlSend); wireEcho(n, context);
   n.out.connect(dest);
   // a slow oscillator for "Rise and fall" (volume)
   n.tremLfo = context.createOscillator(); n.tremLfo.frequency.value = 0.11; n.tremDepth = context.createGain();
@@ -258,7 +286,7 @@ function wanderRig(n, context) {
   m.bS = g(); m.bC = g(); m.busS.connect(m.bS); m.busC.connect(m.bC);
   m.rear = context.createWaveShaper(); { const N = 257, c = new Float32Array(N); for (let i = 0; i < N; i++) c[i] = rearGain(i / (N - 1) * 2 - 1); m.rear.curve = c; }
   m.bS.connect(m.rear); m.bC.connect(m.rear); m.rear.connect(n.rear.gain);
-  m.sin.start(); m.cos.start();
+  m.sin.start(); m.cos.start(); m.t0 = context.currentTime;   // when the turning began: the grid draws where the sound is from it
   return n.mv = m;
 }
 const wanderKind = v => !v ? null : v < 34 ? 'little' : v < 67 ? 'wide' : 'round';
@@ -271,7 +299,7 @@ function applyFx(t, n = t.nodes, context = ctx, now) {
   set(n.wide.gain, Math.cos(p.s * Math.PI / 2));
   set(n.point.gain, Math.sin(p.s * Math.PI / 2) * HRTF_GAIN);
   set(n.air.frequency, 20000 * Math.pow(4500 / 20000, Math.max(0, Math.min(1, (p.d - NEAR) / (FIELD * 1.41 - NEAR)))));
-  set(n.elev.gain, (t.height || 0) > 0 ? 5 : (t.height || 0) < 0 ? -8 : 0);
+  set(n.elev.gain, liftGain(t.height || 0));
   set(n.panner.positionY, p.y);
   if (kind || n.mv) {
     const m = wanderRig(n, context);
@@ -288,21 +316,28 @@ function applyFx(t, n = t.nodes, context = ctx, now) {
   set(n.panner.positionX, kind ? 0 : p.x); set(n.panner.positionZ, kind ? 0 : p.z);
   set(n.rear.gain, kind ? 0 : rearGain(p.back));
   set(n.room.gain, 0.2 * Math.sqrt(distGain(p.d)));
-  // the further a sound is, the more of what reaches you is its space and its echo
+  // the further a sound is, the more of what reaches you is its space
   const wet = passing(t) ? 0.8 : 1 - p.s + p.s * Math.sqrt(distGain(p.d));
-  // "Played on" a small speaker loses its weight, and some of its brightness with it; "Heard through" loses the brightness
-  set(n.lp.frequency, Math.min(20000 * Math.pow(250 / 20000, f('muffled')), 20000 * Math.pow(3400 / 20000, f('thin'))));
-  set(n.hp.frequency, 20 * Math.pow(1500 / 20, f('thin')));
+  // Behind something, a sound loses its brightness: the thicker the thing, the more. ("Thin", which took its weight away
+  // to make it seem far or high, is gone: the grid does that now. A file that carries an amount of it keeps it, unused.)
+  // Underwater is more than a thicker wall: what is left of the sound rings on one low note, and that note sways
+  // slowly, as water moving over the ears makes it.
+  const under = f('muffled') >= UNDERWATER;
+  set(n.lp.frequency, under ? 620 : 20000 * Math.pow(250 / 20000, f('muffled')));
+  set(n.lp.Q, under ? 8 : 0.5);
+  if (under || n.sway) {
+    if (!n.sway) {
+      n.sway = [[0.31, 0], [0.83, 0]].map(([hz]) => { const o = context.createOscillator(), g = context.createGain(); o.frequency.value = hz; g.gain.value = 0; o.connect(g); g.connect(n.lp.detune); o.start(); return { o, g }; });
+    }
+    set(n.sway[0].g.gain, under ? 260 : 0); set(n.sway[1].g.gain, under ? 120 : 0);   // in cents: about a fifth of an octave each way
+  }
   set(n.revSend.gain, f('reverb') * 1.6 * wet);
   set(n.dry.gain, 1 - f('reverb') * 0.65);
-  set(n.dL.delayTime, ECHO_TIME); set(n.dR.delayTime, ECHO_TIME);
-  set(n.dlSend.gain, f('echo') * 1.3 * wet);
-  set(n.fbL.gain, 0.45 + f('echo') * 0.25); set(n.fbR.gain, 0.45 + f('echo') * 0.25);
   set(n.trem.gain, 1 - f('waves') * 0.45);
   set(n.tremDepth.gain, f('waves') * 0.45);
 }
 function disposeChain(n) {
-  try { n.tremLfo.stop(); if (n.mv) { n.mv.sin.stop(); n.mv.cos.stop(); } } catch (e) {}
+  try { n.tremLfo.stop(); if (n.mv) { n.mv.sin.stop(); n.mv.cos.stop(); } if (n.sway) n.sway.forEach(x => x.o.stop()); } catch (e) {}
   try { n.out.disconnect(); } catch (e) {}
 }
 function refreshGains() {
@@ -397,39 +432,61 @@ function applySeamless(t) {
 function retest(t) { if (t.pv) { stopTrackTest(t); trackTest(t); } }
 // remembers when each repeat starts, to draw the progress bar
 function noteHit(t, start, dur, loop) { (t.hits = t.hits || []).push({ start, dur, loop }); if (t.hits.length > 4) t.hits.shift(); }
-/* Passing by: on every repeat the sound travels past the listener, from far on one side to far on the other, along a
-   line through the place it was given (ahead or behind, near or far, above or below). It swells as it comes and
-   fades as it goes, as anything passing does. */
-const TRAJ = { lr: 'Left to right', rl: 'Right to left', pp: 'Back and forth' };
-function trajectory(t) {
-  if (!passing(t)) return null;
+/* Passing by: on every repeat the sound crosses from one side of the listener to the other, on an arc around them at
+   the distance it was given: from all the way left to all the way right (ahead of the listener or behind, as it was
+   put), or from below to above. It starts on one side as the sound starts and reaches the other as the sound ends. */
+const TRAJ = { lr: 'Left to right', rl: 'Right to left', pp: 'Back and forth', up: 'From below to above', down: 'From above to below' };
+// one crossing: which way, and how much of the way (by chance, not always the whole of it)
+function crossing(t) {
   let dir = t.trajDir, k = 1;
   if (t.trajRand) { dir = Math.random() < 0.5 ? 'lr' : 'rl'; k = 0.6 + Math.random() * 0.4; }
   else if (dir === 'pp') { t.ppFlip = !t.ppFlip; dir = t.ppFlip ? 'lr' : 'rl'; }
-  const w = 1.3 * FIELD * k;
-  return dir === 'lr' ? { from: -w, to: w } : { from: w, to: -w };
+  return { dir, k };
+}
+// where a crossing is, from its start (u = 0) to its end (u = 1), and how far behind and how high for its tone
+function crossAt(g, c, u) {
+  const v = (u * 2 - 1) * c.k;
+  if (c.dir === 'up' || c.dir === 'down') {
+    const el = (c.dir === 'up' ? v : -v) * RISE, rh = g.d * Math.cos(el);
+    return { x: rh * Math.sin(g.th), y: g.d * Math.sin(el), z: -rh * Math.cos(g.th), back: -Math.cos(g.th) * Math.cos(el), lift: el / RISE };
+  }
+  const a = (c.dir === 'lr' ? v : -v) * Math.PI / 2, el = g.h * ELEV, rh = g.d * Math.cos(el);
+  return { x: rh * Math.sin(a), y: g.d * Math.sin(el), z: -g.side * rh * Math.cos(a), back: -g.side * Math.cos(a), lift: g.h };
 }
 /* connects the source to its destination, going (if needed) through a place that moves while the sound plays.
-   A short sound crosses once, in the time it lasts. A long one would take minutes and never seem to move: it passes
-   again and again instead, each crossing about PASS seconds, fading in as it comes and out as it goes. A sound
-   listened to on its own repeats without end: half an hour of crossings is laid out for it. */
+   A sound crosses once in the time it lasts, however long: it starts on one side and arrives as it ends. A sound
+   listened to on its own repeats without end: a crossing is laid out for each of its repeats, for half an hour, and
+   where one ends on one side and the next begins on the other the sound dips for a moment, so the way back is not
+   heard as a movement. What was laid out is kept on the node (`pass`), for the grid to draw where the sound is. */
 function trajConnect(t, context, node, dest, when, d, loopLen) {
   if (!passing(t)) { node.connect(dest); return null; }
-  // never through the head: a line left on the listener passes just ahead
-  const depth = Math.abs(t.pos.y) * FIELD < CLOSE ? (t.pos.y < 0 ? -CLOSE : CLOSE) : t.pos.y * FIELD;
-  const m = toPoint(context, HRTF_GAIN), p = binaural(context);
-  const tone = context.createBiquadFilter(); tone.type = 'highshelf'; tone.frequency.value = 3000; tone.gain.value = depth < 0 ? -8 : 2;
-  p.positionZ.value = -depth; p.positionY.value = (t.height || 0) * Math.abs(depth) * 0.9;
-  const whole = loopLen || d, long = whole > PASS * 1.5, each = long ? whole / Math.round(whole / PASS) : whole;
-  const times = loopLen ? Math.ceil(1800 / each) : Math.round(whole / each);
-  let from = node;
-  if (long) { from = context.createGain(); from.gain.setValueAtTime(0, when); node.connect(from); }
+  const r = Math.hypot(t.pos.x, t.pos.y);
+  const g = { d: Math.max(CLOSE, r * FIELD), th: r < 0.05 ? 0 : Math.atan2(t.pos.x, t.pos.y), side: t.pos.y < 0 ? -1 : 1, h: t.height || 0 };
+  const shelf = hz => { const f = context.createBiquadFilter(); f.type = 'highshelf'; f.frequency.value = hz; return f; };
+  const fade = context.createGain(), m = toPoint(context, HRTF_GAIN), lift = shelf(7000), rear = shelf(3000), p = binaural(context);
+  const room = context.createGain(), conv = context.createConvolver(); conv.normalize = false; conv.buffer = firstReflections(context);
+  room.gain.value = 0.2 * Math.sqrt(distGain(g.d));
+  const each = loopLen || d, times = loopLen ? Math.min(600, Math.ceil(1800 / each)) : 1;
+  const N = 65, edge = Math.min(EDGE, each / 8), line = (pts, f) => Float32Array.from(pts, f), list = [];
+  let last = null;
   for (let i = 0; i < times; i++) {
-    const a = when + i * each, tr = trajectory(t);
-    p.positionX.setValueAtTime(tr.from, a); p.positionX.linearRampToValueAtTime(tr.to, a + each);
-    if (long) { from.gain.setValueAtTime(0, a); from.gain.linearRampToValueAtTime(1, a + EDGE); from.gain.setValueAtTime(1, a + each - EDGE); from.gain.linearRampToValueAtTime(0, a + each); }
+    const a = Math.max(when + i * each, 0), c = crossing(t), len = each - 0.002;
+    list.push(c);
+    const pts = Array.from({ length: N }, (_, j) => crossAt(g, c, j / (N - 1)));
+    p.positionX.setValueCurveAtTime(line(pts, q => q.x), a, len);
+    p.positionY.setValueCurveAtTime(line(pts, q => q.y), a, len);
+    p.positionZ.setValueCurveAtTime(line(pts, q => q.z), a, len);
+    rear.gain.setValueCurveAtTime(line(pts, q => rearGain(q.back)), a, len);
+    lift.gain.setValueCurveAtTime(line(pts, q => liftGain(q.lift)), a, len);
+    if (last && Math.hypot(last.x - pts[0].x, last.y - pts[0].y, last.z - pts[0].z) > 0.5) {
+      fade.gain.setValueAtTime(1, a - edge); fade.gain.linearRampToValueAtTime(0, a - 0.005);
+      fade.gain.setValueAtTime(0, a); fade.gain.linearRampToValueAtTime(1, a + edge / 4);
+    }
+    last = pts[N - 1];
   }
-  from.connect(m); m.connect(tone); tone.connect(p); p.connect(dest);
+  node.connect(fade); fade.connect(m); m.connect(lift); lift.connect(rear); rear.connect(p); p.connect(dest);
+  rear.connect(room); room.connect(conv); conv.connect(dest);
+  p.pass = { when, each, list };
   return p;
 }
 function playOne(t, context, dest, when, sources) {
@@ -451,9 +508,9 @@ function playOne(t, context, dest, when, sources) {
     env.gain.setValueCurveAtTime(scaled(CIN, level), when, F);
     env.gain.setValueCurveAtTime(scaled(COUT, level), when + d - F, F);
   } else env.gain.value = level;
-  src.connect(env); trajConnect(t, context, env, dest, when, d, 0);
+  src.connect(env); const tp = trajConnect(t, context, env, dest, when, d, 0);
   src.start(when);
-  if (sources) { sources.add(src); src.onended = () => { sources.delete(src); try { env.disconnect(); } catch (e) {} }; noteHit(t, when, d, 0); }
+  if (sources) { sources.add(src); src.onended = () => { sources.delete(src); try { env.disconnect(); } catch (e) {} }; noteHit(t, when, d, 0); if (tp) t.hits[t.hits.length - 1].pass = tp.pass; }
   return d;
 }
 const avgGap = t => t.per / Math.max(1, t.count);
@@ -556,6 +613,8 @@ function updateProg(t, now) {
   }
   if (lab.textContent !== txt) lab.textContent = txt;
   // a sound that comes back now and then says when it is next due
+  // and where it is, on the grid in its settings, for a sound that moves
+  paintLive(t, now, h && now >= h.start && (h.loop || now - h.start < h.dur) ? h : null);
   const nx = t.el.querySelector('.next');
   if (!nx) return;
   let when = '';
@@ -638,7 +697,7 @@ function stopTrackTest(t) {
   const p = t.pv; t.pv = null;
   try { p.src.stop(); } catch (e) {}
   setTimeout(() => { try { p.g.disconnect(); } catch (e) {} }, 100);
-  // its echo and its space stop with it, unless the composition is playing and the same lines carry its sound there
+  // its space stops with it, unless the composition is playing and the same lines carry its sound there
   if (!playing) cutTails(t);
   setTestBtn(t);
   updateProg(t, ctx.currentTime);
@@ -658,7 +717,7 @@ function trackTest(t) {
   src.loop = true;
   const tp = seam ? (src.connect(g), null) : trajConnect(t, ctx, src, g, when, buf.duration, buf.duration);
   src.start(when);
-  t.pv = { src, g, start: when, dur: Infinity, loop: buf.duration };
+  t.pv = { src, g, start: when, dur: Infinity, loop: buf.duration, pass: tp && tp.pass };
   src.onended = () => { if (tp && tp.osc) try { tp.osc.stop(); } catch (e) {} if (t.pv && t.pv.src === src) stopTrackTest(t); };
   setTestBtn(t);
   if (!progRAF) progRAF = requestAnimationFrame(progLoop);

@@ -806,12 +806,19 @@ input[type=range]:disabled{cursor:not-allowed;--fill:var(--mute);--rail:var(--ru
 .pad.is-all .pf-all{opacity:1}
 .pf-move{stroke:var(--ink2);stroke-dasharray:2 4}
 .pf-head{stroke:var(--ink2)}
+/* where a moving sound is at this moment: a gold point on its path, there only while the sound is heard */
+.pf-live{fill:var(--gold);stroke:var(--field);stroke-width:1.5;opacity:0;pointer-events:none;transition:opacity var(--t-state)}
+.pf-live.on{opacity:1}
 .pf-dot{cursor:grab}
 .pf-dot circle:first-child{stroke:var(--ink2);fill:var(--card2)}
 .pf-dot circle:last-child{fill:var(--ink);stroke:none}
 .pad:focus-visible .pf-dot circle:first-child{stroke:var(--ink);stroke-width:2.5}
 .hgt{align-self:center;width:240px;max-width:100%;height:36px}
 .hgt button{padding:0 var(--s1)}
+/* a sound that rises or comes down past you has no height of its own: the choice stands aside like any disabled control */
+.hgt.is-idle{background:transparent}
+.hgt.is-idle .seg-pill{display:none}
+.hgt.is-idle button:disabled{color:var(--mute);cursor:not-allowed}
 .pos-say{margin:0;font:600 13px/20px var(--ui);color:var(--ink)}
 /* the picture, small, beside the two words that change it */
 .pic-row{display:flex;align-items:center;gap:var(--s2)}
@@ -831,21 +838,15 @@ input[type=range]:disabled{cursor:not-allowed;--fill:var(--mute);--rail:var(--ru
 .fx-row.is-on .fx-hint{color:var(--ink)}
 .fx-amt{width:288px;max-width:100%;height:36px}
 .fx-amt button{padding:0 var(--s1);white-space:nowrap}
-/* what a sound is heard through or played on are words of very different lengths: each takes the room its own length asks for */
-.fx-amt[data-k="muffled"] button,.fx-amt[data-k="thin"] button{flex:1 1 auto;padding:0 var(--s2)}
-/* the echo is a slider as wide as the amounts, its word after it; how it moves is a menu of the same width */
-.fx-slide{display:flex;align-items:center;gap:var(--s3);height:36px}
-.fx-slide input{flex:1;min-width:0}
-.fx-slide .val{flex:none;min-width:52px;font-size:13px;color:var(--ink2)}
-.fx-row.is-on .fx-slide .val{color:var(--ink);font-weight:600}
+/* what a sound is behind are words of very different lengths: each takes the room its own length asks for */
+.fx-amt[data-k="muffled"] button{flex:1 1 auto;padding:0 var(--s2)}
+/* how it moves is a menu as wide as the amounts */
 .fx-row>select{width:100%}
 .fx-row:not(.is-on) .fx-amt button.on{color:var(--ink2)}
 .fx-row.is-on .seg-pill{background:var(--ink);box-shadow:none}
 .fx-row.is-on .fx-amt button.on{color:var(--on-ink);font-weight:600}
-/* the choice that belongs to an effect ends its sentence, and is there only while the effect is on */
-.fx-kind{white-space:nowrap}
-.fx-row:not(.is-on) .fx-kind,.fx-row.is-on .fx-rest{display:none}
-select.kind{field-sizing:content;height:28px;margin-left:var(--s1);padding:0 var(--s5) 0 var(--s2);font-size:12px;font-weight:500;background-position:right var(--s1) center;vertical-align:middle}
+/* the choice that belongs to an effect ends its sentence */
+select.kind{field-sizing:content;height:28px;margin-inline:var(--s1);padding:0 var(--s5) 0 var(--s2);font-size:12px;font-weight:500;background-position:right var(--s1) center;vertical-align:middle}
 /* what is done with the sound itself, on the fold at the foot: keep it at one end, take it away at the other */
 .dfoot{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);flex-wrap:wrap;padding:var(--s3) var(--pad);border-top:1px dashed var(--rule)}
 .dfoot .keep svg{width:16px;height:16px}

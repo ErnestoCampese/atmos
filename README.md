@@ -98,10 +98,11 @@ playing:
 in the middle: drag the dot and the sound goes there, to the left or right, ahead or behind, near or
 far, with *Below*, *Level* or *Above* under it. In the middle the sound is all around you. Sounds are
 placed the way two ears hear them, so this is best heard with headphones. Beside the grid are the
-effects, each in plain words: *Space* and *Rise and fall* by how much (*Off*, *A little*, *Medium*,
-*Strong*), *Echo* on a slider, *Heard through* a curtain, a window, a wall or water, *Played on* a
-radio or a telephone, and *How it moves*: it stays, wanders, circles around you, or passes by each
-time it plays. The ▶ button on a sound plays that sound on its own, over and over, so you can
+effects, each in plain words: *Space* gives the sound a place (a room, a cathedral, a cave, a narrow
+street, a forest, the mountains and more) by how much (*Off*, *A little*, *Medium*, *Strong*),
+*Rise and fall* by how much too, *Behind a* curtain, a window or a wall, or underwater, and *How it
+moves*: it stays, wanders, circles around you, or passes by each time it plays, from one side to
+the other or from below to above. The ▶ button on a sound plays that sound on its own, over and over, so you can
 hear a change as you make it; **Only this** silences every other sound while the composition plays.
 
 ## Freesound
