@@ -351,12 +351,13 @@ function playOne(t, context, dest, when, sources) {
   return d;
 }
 const avgGap = t => t.per / Math.max(1, t.count);
-// Random: the sound never overlaps itself. After it ends there is always a pause
-// (at least 1–5 s) of unpredictable length that, on average, respects the chosen frequency.
+/* Random: the sound never overlaps itself. The chosen frequency is the silence between one play and the next,
+   counted from the moment the sound ends: on average period / times, whatever the length of the sound.
+   The pause is never shorter than 0.4 of that (so the sound does not come straight back) nor longer than 3 times it,
+   and it is drawn from two throws instead of one, which makes very short pauses rare. */
 function randomPause(t) {
-  const a = avgGap(t), minP = Math.max(1, Math.min(5, a * 0.2));
-  const mean = Math.max(minP, a - (t.buffer ? t.buffer.duration : 0));
-  return Math.min(mean * 4, Math.max(minP, -Math.log(1 - Math.random()) * mean));
+  const a = avgGap(t), g = -(Math.log(1 - Math.random()) + Math.log(1 - Math.random())) / 2;
+  return Math.max(1, a * Math.min(3, 0.4 + 0.6 * g));
 }
 function firstTime(t, now) {
   if (t.mode === 'loop') return now;
