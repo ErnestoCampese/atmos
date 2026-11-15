@@ -790,6 +790,8 @@ input[type=range]:disabled{cursor:not-allowed;--fill:var(--mute);--rail:var(--ru
 .opts input[type=range]{flex:1 1 40px;min-width:40px;max-width:120px}
 .fx-how .opts:has(input[type=range]){flex:1 1 104px;flex-wrap:nowrap}
 .fx-how .opts:has(input[type=number]){flex:0 0 100%;flex-wrap:nowrap}
+/* the two ways a repeat may vary belong together: they move to the next line as one, never one without the other */
+.fx-how .vary{gap:var(--s2) var(--s3);min-width:0}
 .val{color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
 /* which side: the title and the place in words on one line, the listener under it at its own size */
 .fx-head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s3);width:100%}

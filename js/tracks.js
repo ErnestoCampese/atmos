@@ -119,8 +119,10 @@ function renderTrack(t) {
   const varyOpts = `
       <div class="opts">Fade in and out <input type="range" class="hfade" min="0" max="5" step="0.1" value="${t.hitFade}" aria-label="Fade in and out">
         <span class="val hfv">${hfLabel(t.hitFade)}</span></div>
-      <label class="check"><input type="checkbox" class="vpitch" ${t.varyPitch ? 'checked' : ''}> Vary the pitch a little</label>
-      <label class="check"><input type="checkbox" class="vvol" ${t.varyVol ? 'checked' : ''}> Vary the volume a little</label>`;
+      <div class="opts vary">
+        <label class="check"><input type="checkbox" class="vpitch" ${t.varyPitch ? 'checked' : ''}> Vary the pitch a little</label>
+        <label class="check"><input type="checkbox" class="vvol" ${t.varyVol ? 'checked' : ''}> Vary the volume a little</label>
+      </div>`;
   const intOpts = `
     <div class="opts">Every <input type="number" class="every" min="0.5" max="3600" step="0.5" value="${t.every}" aria-label="Seconds between repeats"> seconds</div>
     ${varyOpts}`;
@@ -181,7 +183,7 @@ function renderTrack(t) {
             <div class="fx-cell fx-how">
               <h4>How it plays</h4>
               <select class="plays" aria-label="How ${nameAttr} plays">${Object.entries(MODES).map(([m, label]) => `<option value="${m}" ${t.mode === m ? 'selected' : ''}>${label}</option>`).join('')}</select>
-              ${t.mode === 'loop' ? `<label class="check" title="Trims the silence at each end and joins the sound where its end is most like its start, so you can’t hear it begin again"><input type="checkbox" class="seam" ${t.seamless ? 'checked' : ''} ${t.buffer ? '' : 'disabled'}> Hide the join</label>` : ''}
+              ${t.mode === 'loop' ? `<label class="check" title="Trims the silence and any fade at each end, and joins the sound where its end is most like its start, so you can’t hear it begin again"><input type="checkbox" class="seam" ${t.seamless ? 'checked' : ''} ${t.buffer ? '' : 'disabled'}> Loop seamlessly</label>` : ''}
               ${{ loop: loopOpts, interval: intOpts, random: rndOpts }[t.mode]}
             </div>
             <div class="fx-cell fx-side">

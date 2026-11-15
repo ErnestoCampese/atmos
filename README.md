@@ -89,7 +89,7 @@ Your sounds are never touched by any of this.
 Each sound in a composition has its own volume, its own position between left and right, and its
 own way of playing:
 
-- **Continuous** — it loops without stopping. Turn on **Hide the join** and αtmos finds the point
+- **Continuous** — it loops without stopping. Turn on **Loop seamlessly** and αtmos finds the point
   where the end flows back into the beginning, so there is no seam to hear.
 - **At intervals** — it plays every so many seconds.
 - **At random** — it plays at unpredictable moments, roughly as often as you ask.

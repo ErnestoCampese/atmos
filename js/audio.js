@@ -219,6 +219,21 @@ function makeSeamless(buf, fadeSec) {
   let a = 0, b = len - 1;
   while (a < len && !loud(a)) a++;
   while (b > a && !loud(b)) b--;
+  /* A recording often fades in and out on its own. Left in, a short join falls inside those fades and the loop
+     sinks and comes back. So each end is trimmed further, for as long as the sound keeps rising towards its usual
+     level (within 3 dB of the middle one): a fade, not a quiet moment between two events, which is left alone.
+     Never more than a fifth of the sound or 5 seconds at either end, and only if enough is left. */
+  const win = Math.round(0.2 * sr), nW = Math.floor((b - a + 1) / win);
+  if (nW >= 10) {
+    const lv = new Float32Array(nW);
+    for (let w = 0; w < nW; w++) { let e = 0; for (let c = 0; c < C; c++) { const d = ch[c]; for (let i = a + w * win, n = i + win; i < n; i++) e += d[i] * d[i]; } lv[w] = e; }
+    const usual = Float32Array.from(lv).sort()[nW >> 1] / 2, most = Math.min(Math.floor(nW / 5), 25);
+    let i = 0, j = nW - 1;
+    while (i < most && lv[i] < usual && lv[i + 1] > lv[i]) i++;
+    while (nW - 1 - j < most && lv[j] < usual && lv[j - 1] > lv[j]) j--;
+    const a2 = a + i * win, b2 = j < nW - 1 ? a + (j + 1) * win - 1 : b;
+    if (b2 - a2 + 1 >= sr * 1.5) { a = a2; b = b2; }
+  }
   const L = b - a + 1;
   if (L < sr * 1.5) return null;
   const X = Math.max(Math.round(0.05 * sr), Math.round(Math.min(fadeSec, L / sr / 4) * sr));
@@ -252,7 +267,7 @@ const isSeamless = t => t.mode === 'loop' && t.seamless && t.loopBuf;
 function applySeamless(t) {
   if (!t.buffer) return;
   t.loopBuf = t.seamless ? makeSeamless(t.buffer, t.fade) : null;
-  if (t.seamless && !t.loopBuf) { t.seamless = false; toast('This sound is too short to hide the join. It needs at least 1.5 seconds without silence.', { kind: 'warn', ms: 5000 }); }
+  if (t.seamless && !t.loopBuf) { t.seamless = false; toast('This sound is too short to loop seamlessly. It needs at least 1.5 seconds without silence.', { kind: 'warn', ms: 5000 }); }
   if (playing && t.st) resetTrack(t, ctx.currentTime + 0.05);
   retest(t);
 }
