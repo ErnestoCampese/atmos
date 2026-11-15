@@ -61,6 +61,11 @@ const place = (fx, revType, echoType) => ({ fx: Object.assign(noFx(), fx), revTy
 const PLACES = [
   ['none', 'No effects', { fx: noFx() }],
   ['near', 'A step away', place({ reverb: 22, muffled: 12 }, 'room')],
+  // distance and height are told by tone, as the ear tells them: far is duller, lighter and more in the air than
+  // near; what is above has lost its weight; what is below has lost its brightness and rings in the space under you
+  ['far', 'Far away', place({ muffled: 44, thin: 40, reverb: 46 }, 'hall')],
+  ['above', 'High above', place({ thin: 58, reverb: 26 }, 'hall')],
+  ['below', 'Down below', place({ muffled: 58, reverb: 38 }, 'hall')],
   ['window', 'Behind a window', place({ muffled: 66, reverb: 20, thin: 12 }, 'room')],
   ['hall', 'In a big room', place({ reverb: 48 }, 'hall')],
   ['cathedral', 'In a cathedral', place({ reverb: 76 }, 'cathedral')],
