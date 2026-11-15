@@ -41,9 +41,8 @@ function showListAboveSheet() {
   // the bar once pinned: its contents plus the pinned padding (--s3 above and below)
   const s3 = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--s3')) || 12;
   const pinned = tp.getBoundingClientRect().height - pad + s3 * 2;
-  // the bar stays in the flow while pinned, so its thinner padding also lifts the list by the difference
-  const lift = pad - s3 * 2;
-  const top = $('libPanel').closest('.ed-main').querySelector('.tracks').getBoundingClientRect().top + scrollY - lift - pinned - s3;
+  // (pinning does not move the list: the margin under the bar takes up what its thinner padding gives up)
+  const top = $('libPanel').closest('.ed-main').querySelector('.tracks').getBoundingClientRect().top + scrollY - pinned - s3;
   const smooth = !matchMedia('(prefers-reduced-motion: reduce)').matches;
   window.scrollTo({ top: Math.max(0, top), behavior: smooth ? 'smooth' : 'auto' });
 }

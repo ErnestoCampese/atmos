@@ -473,7 +473,10 @@ p.count{margin-top:auto;padding-block:var(--s2);color:var(--mute);font-size:13px
 .transport::before{content:"";position:absolute;z-index:-1;left:50%;transform:translateX(-50%);width:calc(100vw - var(--sbw,0px));top:0;bottom:0;
   background:rgba(18,16,20,.94);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom:1px solid var(--rule);opacity:0;transition:opacity .25s var(--ease);pointer-events:none}
 .transport.stuck::before{opacity:1}
-.transport.stuck{padding:var(--s3) 0}
+/* pinned, the bar is thinner (16px less padding), but the page must stay as tall as it was: what the padding gives up,
+   the margin under the bar takes. Otherwise pinning shortens the page; on a page that ends right where the bar pins
+   the scroll is then pushed back, the bar lets go, the page grows again, and it flickers at every turn of the wheel */
+.transport.stuck{padding:var(--s3) 0;margin-bottom:var(--s6)}
 .tmain{display:flex;align-items:center;gap:var(--s5);flex-wrap:wrap}
 /* play: paper at rest; gold, with a soft breathing light, while the tape sounds */
 .play{position:relative;width:56px;height:56px;padding:0;border-radius:50%;border:0;background:var(--ink);color:var(--on-ink);display:grid;place-items:center;flex:none;
@@ -590,14 +593,22 @@ p.count{margin-top:auto;padding-block:var(--s2);color:var(--mute);font-size:13px
 .track.enter{animation:row-in .3s var(--ease) calc(var(--after,0s) + var(--i,0) * 35ms) both}
 
 /* the number is also the handle that reorders the list */
-.grip{position:relative;display:grid;place-items:center;width:28px;height:32px;border-radius:var(--r-ctl);color:var(--mute);cursor:grab;touch-action:none;
-  font-size:12px;font-variant-numeric:tabular-nums;transition:color var(--t-state),background var(--t-state)}
-.grip svg{position:absolute;right:calc(var(--s1) * -1);width:16px;height:16px;opacity:0;transition:opacity var(--t-state)}
+/* the handle answers over its whole cell: from the edge of the list to the margin rule, and from the rule above the
+   line to the one below it. What is seen stays the small plate around the number, drawn apart from the cell */
+.grip{position:relative;display:grid;place-items:center;align-self:stretch;box-sizing:content-box;width:28px;
+  margin:calc(var(--s2) * -1) calc(var(--s3) * -1) calc(var(--s2) * -1) calc(var(--pad) * -1);padding:0 var(--s3) 0 var(--pad);
+  color:var(--mute);cursor:grab;touch-action:none;font-size:12px;font-variant-numeric:tabular-nums;transition:color var(--t-state)}
+.grip::before{content:"";position:absolute;left:var(--pad);top:50%;width:28px;height:32px;margin-top:-16px;border-radius:var(--r-ctl);transition:background var(--t-state)}
+.grip svg{position:absolute;right:calc(var(--s3) - var(--s1));width:16px;height:16px;opacity:0;transition:opacity var(--t-state)}
 /* a column of numbers is set flush right, so the margin rule sits exactly halfway to the picture */
-.grip .num{justify-self:end;transition:opacity var(--t-state)}
+.grip .num{position:relative;justify-self:end;transition:opacity var(--t-state)}
 .track:hover .grip svg,.grip:focus-visible svg{opacity:1}
 .track:hover .grip .num,.grip:focus-visible .num{opacity:0}
-.grip:hover,.grip:focus-visible{background:var(--hover);color:var(--ink)}
+.grip:hover,.grip:focus-visible{color:var(--ink)}
+.grip:hover::before,.grip:focus-visible::before{background:var(--hover)}
+/* the focus ring goes round the plate, not round the whole cell */
+.grip:focus-visible{outline:0}
+.grip:focus-visible::before{outline:2px solid var(--ink);outline-offset:2px}
 
 /* the picture of a sound, which is also its "listen alone" button */
 .pic{position:relative;width:36px;height:36px;padding:0;border-radius:var(--r-ctl);border:1px solid var(--line);overflow:hidden;color:var(--ink);
@@ -1110,7 +1121,8 @@ input[type=range].imm-vol::-webkit-slider-thumb{box-shadow:0 0 12px rgba(0,0,0,.
    Its settings keep their columns down to 608px, where they still fit at their natural size. */
 @container tracks (max-width:719px){
   .trow{grid-template-columns:28px 49px minmax(0,1fr) auto auto;grid-template-areas:"n p nm nm nm" ". vol vol only op";row-gap:var(--s2);padding-block:var(--s3)}
-  .trow>.grip{grid-area:n}.trow>.pic{grid-area:p}.trow>.nmcol{grid-area:nm}.trow>.volw{grid-area:vol}.trow>.only{grid-area:only}.trow>.opener{grid-area:op}
+  /* the handle's cell is as tall as the sound's two lines */
+  .trow>.grip{grid-area:n;grid-row:1/-1;margin-block:calc(var(--s3) * -1)}.trow>.pic{grid-area:p}.trow>.nmcol{grid-area:nm}.trow>.volw{grid-area:vol}.trow>.only{grid-area:only}.trow>.opener{grid-area:op}
   .trow>.warn{grid-column:3/-1}
   .volw .vol{flex:1 1 64px;width:auto}
 }

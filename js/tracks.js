@@ -496,6 +496,11 @@ function wireDrawerAndDrop(t, el) {
   el.addEventListener('dragstart', e => {
     if (!el.draggable) return;
     dragT = t; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/x-mixer-track', t.uid);
+    /* what is carried under the pointer is the line alone. Left to itself the browser cuts that picture out of the
+       page over the box of the sound and everything inside it, and the folded settings, though out of sight, are
+       some 500px tall: it would carry a faint copy of every line below as well */
+    const row = el.querySelector('.trow'), rr = row.getBoundingClientRect();
+    e.dataTransfer.setDragImage(row, e.clientX - rr.left, e.clientY - rr.top);
     setTimeout(() => el.classList.add('dragging'), 0);
   });
   el.addEventListener('dragend', () => { el.draggable = false; el.classList.remove('dragging'); dragT = null; clearDropMarks(); clearShift(); });
