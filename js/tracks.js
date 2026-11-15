@@ -304,14 +304,15 @@ function renderTrack(t) {
     e.target.setAttribute('aria-valuetext', w); q('.ev').textContent = w; rowOn('echo', t.fx.echo > 0);
     applyFx(t); setOpener(t); markDirty();
   };
-  /* how it moves: one choice sets the two amounts behind it. A sound heard on its own starts again, so the new way
-     of moving is heard at once */
+  /* how it moves: one choice sets the two amounts behind it. The sound starts again, on its own or in the
+     composition, so the new way of moving is heard at once and nothing still playing keeps the old one */
   q('.moves').onchange = e => {
     const m = e.target.value, pass = !(m in WANDER) && m !== 'still';
     t.fx.movement = WANDER[m] || 0; t.fx.trajectory = pass ? 100 : 0;
     if (pass) { t.trajRand = m === 'rand'; if (!t.trajRand) t.trajDir = m; }
     rowOn('movement', m !== 'still'); q('.fx-row[data-fx="movement"] .fx-hint').textContent = moveSay(t);
     applyFx(t); paintPad(t, el); retest(t); setOpener(t); markDirty();
+    if (playing) resetTrack(t, ctx.currentTime + 0.05);
   };
   /* an amount is chosen like a word in a list: a click, or the arrow keys once it has the focus */
   el.querySelectorAll('.fx-amt').forEach(seg => {

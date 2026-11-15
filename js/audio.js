@@ -130,9 +130,12 @@ function cutTails(t, silent) {
    A sound is placed around the listener's head: to the left or right, ahead or behind, near or far, above or below.
    It is done the way the ear does it (the browser's binaural panner, "HRTF"): each ear gets the sound a little later,
    quieter and duller than the other, as a head in the way would make it. It needs headphones to be heard fully.
-   To that are added what tells distance and height: a far sound is quieter, duller, and more of its space than of
-   itself; a sound above is brighter, one below is darker.
+   To that are added what tells distance, height and front from back: a far sound is quieter, duller, and more of its
+   space than of itself; a sound above is brighter, one below is darker; one behind is duller than one ahead, as the
+   ear's own shape makes it. And every placed sound has the first few reflections of a room around it, too short to
+   be heard as a room: they are what puts a sound out there, not inside the head.
    In the middle of the grid a sound is not a point at all: it is "all around you", the recording as it is, in stereo.
+   Anywhere else it is wholly a point, however near.
    The measures behind these numbers: .dev/hrtf-probe.js */
 const FIELD = 10;        // metres from the listener to the edge of the grid
 const NEAR = 3;          // nearer than this, a sound is no louder: the first third of the grid is "close"
@@ -140,7 +143,9 @@ const CLOSE = 1.5;       // and nothing comes nearer than this to the middle of 
 const ROLLOFF = 0.93;    // the edge of the grid is 10 dB quieter than close by, its corners 13
 const HRTF_GAIN = 2;     // the binaural panner comes out about 5 dB quieter than the sound that went in, more for a wide recording
 const ELEV = 55 * Math.PI / 180;
-const LAP = 0.05;        // a sound that wanders goes and comes back in 20 seconds
+const LAP = 1 / 12;      // a sound that wanders goes and comes back in 12 seconds, or goes once round
+const PASS = 12;         // a long sound passes by again and again, each crossing about this many seconds
+const EDGE = 1.2;        // and fades in and out at the far ends of each crossing, where it turns back unheard
 const distGain = d => NEAR / (NEAR + ROLLOFF * (Math.max(d, NEAR) - NEAR));
 /* "Passing by" moves the sound across each time it plays. A seamless loop never plays again, so there is nothing
    to pass: the effect is left out of it, its amount kept for when the loop is no longer seamless. */
@@ -155,16 +160,37 @@ function placeOf(t) {
   const h = t.height || 0, wander = wandering(t);
   // a sound that wanders has to be somewhere to wander from: left on the listener, it starts three metres ahead
   if (wander && r < 0.3) { if (r < 0.01) { x = 0; y = 0.3; } else { x *= 0.3 / r; y *= 0.3 / r; } r = 0.3; }
-  const u = Math.min(1, r / 0.2), s = passing(t) ? 0 : h || wander ? 1 : u * u * (3 - 2 * u);
-  const d = Math.max(CLOSE, r * FIELD), over = r < 0.05, el = over ? h * Math.PI / 2 : h * ELEV;
+  const over = r < 0.05, s = passing(t) || (over && !h) ? 0 : 1;
+  const d = Math.max(CLOSE, r * FIELD), el = over ? h * Math.PI / 2 : h * ELEV;
   const th = over ? 0 : Math.atan2(x, y), rh = d * Math.cos(el);
-  return { s, d, th, rh, x: rh * Math.sin(th), y: d * Math.sin(el), z: -rh * Math.cos(th) };
+  // `back`: -1 straight ahead, 0 to the side or overhead, 1 straight behind
+  return { s, d, th, rh, back: over ? 0 : -Math.cos(th), x: rh * Math.sin(th), y: d * Math.sin(el), z: -rh * Math.cos(th) };
 }
 const binaural = context => {
   const p = context.createPanner();
   p.panningModel = 'HRTF'; p.distanceModel = 'inverse'; p.refDistance = NEAR; p.rolloffFactor = ROLLOFF;
   return p;
 };
+/* front from back, in tone: above 3 kHz a sound ahead is a little brighter, one behind a good deal duller (in dB: +3 to -8) */
+const rearGain = b => b < 0 ? -3 * b : -8 * b;
+/* the first reflections of a room, for both ears: a few short taps in the first 60 ms, each from its own side (the
+   far ear gets it a moment later and weaker), each a little duller than the one before */
+const roomCache = new Map();
+function firstReflections(context) {
+  const sr = context.sampleRate;
+  if (roomCache.has(sr)) return roomCache.get(sr);
+  const b = new AudioBuffer({ length: Math.round(0.07 * sr), numberOfChannels: 2, sampleRate: sr });
+  const taps = [[7, .5, -1], [11, .42, 1], [17, -.36, -.6], [23, .3, .7], [31, -.24, -1], [39, .2, 1], [47, -.15, -.4], [58, .12, .5]];
+  taps.forEach(([ms, g, side], i) => {
+    for (let c = 0; c < 2; c++) {
+      const far = (side < 0) === (c === 1), d = b.getChannelData(c);
+      const at = Math.round((ms / 1000 + (far ? 0.0006 * Math.abs(side) : 0)) * sr), k = g * (far ? 1 - 0.6 * Math.abs(side) : 1);
+      // each tap is smeared over a few samples, more for the later ones: that is its dullness
+      const w = 2 + i; for (let j = 0; j < w; j++) d[at + j] += k * (1 - j / w) / (w / 2 + 0.5);
+    }
+  });
+  roomCache.set(sr, b); return b;
+}
 // the ear's data is read the first time a binaural panner is made: have it ready before the first sound needs it
 binaural(ctx);
 // one channel out of two, as a point in space has: left and right are mixed before the sound is placed
@@ -189,8 +215,11 @@ function buildChain(t, context, dest) {
   n.point = toPoint(context, 0);
   n.air = context.createBiquadFilter(); n.air.type = 'lowpass'; n.air.Q.value = 0.5;
   n.elev = context.createBiquadFilter(); n.elev.type = 'highshelf'; n.elev.frequency.value = 7000;
+  n.rear = context.createBiquadFilter(); n.rear.type = 'highshelf'; n.rear.frequency.value = 3000;
   n.panner = binaural(context);
-  n.point.connect(n.air); n.air.connect(n.elev); n.elev.connect(n.panner); n.panner.connect(n.out);
+  n.point.connect(n.air); n.air.connect(n.elev); n.elev.connect(n.rear); n.rear.connect(n.panner); n.panner.connect(n.out);
+  n.room = context.createGain(); n.roomConv = context.createConvolver(); n.roomConv.normalize = false; n.roomConv.buffer = firstReflections(context);
+  n.rear.connect(n.room); n.room.connect(n.roomConv); n.roomConv.connect(n.out);
   n.trem.connect(n.revSend); setReverbType(t, n, context);
   n.trem.connect(n.dlSend); wireEcho(n, context);
   n.out.connect(dest);
@@ -204,7 +233,7 @@ function buildChain(t, context, dest) {
 /* A sound that wanders turns around the listener, at the distance it was put: a little or widely to either side of
    its place, or all the way round. The place is an angle; two slow waves give its sine and cosine, which four gains
    turn into the left-right and ahead-behind of the panner. Built only for a sound that wanders. */
-const SWAY = { little: 30 * Math.PI / 180, wide: 80 * Math.PI / 180 };
+const SWAY = { little: 40 * Math.PI / 180, wide: 85 * Math.PI / 180 };
 function wanderRig(n, context) {
   if (n.mv) return n.mv;
   const m = { src: {}, on: null }, g = () => { const x = context.createGain(); x.gain.value = 0; return x; };
@@ -225,6 +254,10 @@ function wanderRig(n, context) {
   m.busS.connect(m.xS); m.busS.connect(m.zS); m.busC.connect(m.xC); m.busC.connect(m.zC);
   m.xS.connect(n.panner.positionX); m.xC.connect(n.panner.positionX);
   m.zS.connect(n.panner.positionZ); m.zC.connect(n.panner.positionZ);
+  // how far behind it is at each moment, read off a curve as the tone that tells front from back
+  m.bS = g(); m.bC = g(); m.busS.connect(m.bS); m.busC.connect(m.bC);
+  m.rear = context.createWaveShaper(); { const N = 257, c = new Float32Array(N); for (let i = 0; i < N; i++) c[i] = rearGain(i / (N - 1) * 2 - 1); m.rear.curve = c; }
+  m.bS.connect(m.rear); m.bC.connect(m.rear); m.rear.connect(n.rear.gain);
   m.sin.start(); m.cos.start();
   return n.mv = m;
 }
@@ -250,8 +283,11 @@ function applyFx(t, n = t.nodes, context = ctx, now) {
     const a = kind ? p.rh : 0;
     set(m.xS.gain, a * Math.cos(p.th)); set(m.xC.gain, a * Math.sin(p.th));
     set(m.zS.gain, a * Math.sin(p.th)); set(m.zC.gain, -a * Math.cos(p.th));
+    set(m.bS.gain, kind ? Math.sin(p.th) : 0); set(m.bC.gain, kind ? -Math.cos(p.th) : 0);
   }
   set(n.panner.positionX, kind ? 0 : p.x); set(n.panner.positionZ, kind ? 0 : p.z);
+  set(n.rear.gain, kind ? 0 : rearGain(p.back));
+  set(n.room.gain, 0.2 * Math.sqrt(distGain(p.d)));
   // the further a sound is, the more of what reaches you is its space and its echo
   const wet = passing(t) ? 0.8 : 1 - p.s + p.s * Math.sqrt(distGain(p.d));
   // "Played on" a small speaker loses its weight, and some of its brightness with it; "Heard through" loses the brightness
@@ -373,25 +409,27 @@ function trajectory(t) {
   const w = 1.3 * FIELD * k;
   return dir === 'lr' ? { from: -w, to: w } : { from: w, to: -w };
 }
-// connects the source to its destination, going (if needed) through a place that moves while the sound plays
+/* connects the source to its destination, going (if needed) through a place that moves while the sound plays.
+   A short sound crosses once, in the time it lasts. A long one would take minutes and never seem to move: it passes
+   again and again instead, each crossing about PASS seconds, fading in as it comes and out as it goes. A sound
+   listened to on its own repeats without end: half an hour of crossings is laid out for it. */
 function trajConnect(t, context, node, dest, when, d, loopLen) {
-  const tr = trajectory(t);
-  if (!tr) { node.connect(dest); return null; }
+  if (!passing(t)) { node.connect(dest); return null; }
   // never through the head: a line left on the listener passes just ahead
   const depth = Math.abs(t.pos.y) * FIELD < CLOSE ? (t.pos.y < 0 ? -CLOSE : CLOSE) : t.pos.y * FIELD;
   const m = toPoint(context, HRTF_GAIN), p = binaural(context);
+  const tone = context.createBiquadFilter(); tone.type = 'highshelf'; tone.frequency.value = 3000; tone.gain.value = depth < 0 ? -8 : 2;
   p.positionZ.value = -depth; p.positionY.value = (t.height || 0) * Math.abs(depth) * 0.9;
-  if (loopLen) {
-    // a sound listened to on its own repeats without end: it goes back and forth, one crossing per lap
-    const osc = context.createOscillator(); osc.type = 'triangle'; osc.frequency.value = 1 / (2 * loopLen);
-    const far = context.createGain(); far.gain.value = tr.to;
-    osc.connect(far); far.connect(p.positionX); osc.start(when);
-    p.osc = osc;
-  } else {
-    p.positionX.setValueAtTime(tr.from, when);
-    p.positionX.linearRampToValueAtTime(tr.to, when + d);
+  const whole = loopLen || d, long = whole > PASS * 1.5, each = long ? whole / Math.round(whole / PASS) : whole;
+  const times = loopLen ? Math.ceil(1800 / each) : Math.round(whole / each);
+  let from = node;
+  if (long) { from = context.createGain(); from.gain.setValueAtTime(0, when); node.connect(from); }
+  for (let i = 0; i < times; i++) {
+    const a = when + i * each, tr = trajectory(t);
+    p.positionX.setValueAtTime(tr.from, a); p.positionX.linearRampToValueAtTime(tr.to, a + each);
+    if (long) { from.gain.setValueAtTime(0, a); from.gain.linearRampToValueAtTime(1, a + EDGE); from.gain.setValueAtTime(1, a + each - EDGE); from.gain.linearRampToValueAtTime(0, a + each); }
   }
-  node.connect(m); m.connect(p); p.connect(dest);
+  from.connect(m); m.connect(tone); tone.connect(p); p.connect(dest);
   return p;
 }
 function playOne(t, context, dest, when, sources) {

@@ -18,10 +18,11 @@ const cleanImg = i => !i || typeof i !== 'object' || i.id ? null : typeof i.loca
 const cleanFx = f => Object.fromEntries(FILTER_KEYS.map(k => [k, Math.round(num((f || {})[k], 0, 0, 100))]));
 /* Where a sound is: x to the right and y ahead of the listener, each from -1 to 1 (the middle is "all around you"),
    and its height (-1 below, 0 level, 1 above). `pan` is still written, as the left-right part of it, for older copies
-   of the app; a file that has only `pan` (every file before November 2026) is placed on that side, close by. */
+   of the app; a file that has only `pan` (every file before November 2026) is placed close by, ahead and as far to
+   that side as it was: fully to one side for a sound that was fully there. */
 const posOf = j => { const p = j.position;
   return p && typeof p === 'object' ? { pos: { x: num(p.x, 0, -1, 1), y: num(p.y, 0, -1, 1) }, height: Math.sign(num(p.height, 0, -1, 1)) }
-    : { pos: { x: r2(num(j.pan, 0, -1, 1) * 0.3), y: 0 }, height: 0 }; };
+    : (a => ({ pos: a ? { x: r2(0.25 * Math.sin(a)), y: r2(0.25 * Math.cos(a)) } : { x: 0, y: 0 }, height: 0 }))(num(j.pan, 0, -1, 1) * Math.PI / 2); };
 const toJson = t => ({ file: t.file, name: t.name, volume: r2(t.volume), pan: r2(t.pos.x), position: { x: r2(t.pos.x), y: r2(t.pos.y), height: t.height }, mode: t.mode, crossfade: t.crossfade, crossfadeSeconds: t.fade,
   everySeconds: t.every, times: t.count, periodSeconds: t.per, varyPitch: t.varyPitch, varyVolume: t.varyVol, hitFade: t.hitFade, filters: { ...t.fx },
   reverbType: t.revType, echoType: t.echoType, trajectoryDirection: t.trajDir, trajectoryRandom: t.trajRand, seamlessLoop: t.seamless,
