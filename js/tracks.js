@@ -182,9 +182,8 @@ function renderTrack(t) {
   const dur = baseDur(t);
   const at = cur ? Math.max(0, cur.tracks.indexOf(t)) : 0;
   const did = 'd-' + t.uid;
-  const loopOpts = t.seamless ? `
-    <div class="opts">Fade <input type="range" class="fade" min="0.5" max="10" step="0.5" value="${t.fade}" aria-label="Length of the fade where it joins">
-      <span class="val fv">${t.fade} s</span></div>` : `
+  // a seamless loop joins its end to its start by itself: there is no fade to set, so none is offered
+  const loopOpts = t.seamless ? '' : `
     <div class="opts">
       <label class="check"><input type="checkbox" class="cf" ${t.crossfade ? 'checked' : ''}> Fade the end into the start</label>
     </div>
@@ -326,7 +325,7 @@ function renderTrack(t) {
   q('.opener').onclick = () => setDrawer(t, !t.fxOpen);
   q('.plays').onchange = e => {
     t.mode = e.target.value;
-    if (t.mode === 'loop' && t.seamless && !t.loopBuf && t.buffer) t.loopBuf = makeSeamless(t.buffer, t.fade);
+    if (t.mode === 'loop' && t.seamless && !t.loopBuf && t.buffer) t.loopBuf = makeSeamless(t.buffer, SEAM_JOIN);
     if (playing) resetTrack(t, ctx.currentTime + 0.05);
     applyFx(t); retest(t);
     replaceEl(t); markDirty();
@@ -423,8 +422,7 @@ function renderTrack(t) {
   };
   if (t.mode === 'loop') {
     if (q('.cf')) q('.cf').onchange = e => { t.crossfade = e.target.checked; q('.fade').disabled = !t.crossfade; markDirty(); };
-    q('.fade').oninput = e => { t.fade = +e.target.value; q('.fv').textContent = t.fade + ' s'; markDirty(); };
-    q('.fade').onchange = () => { if (t.seamless) applySeamless(t); };
+    if (q('.fade')) q('.fade').oninput = e => { t.fade = +e.target.value; q('.fv').textContent = t.fade + ' s'; markDirty(); };
   } else if (t.mode === 'random') {
     const soon = () => { if (playing && t.st && t.buffer) t.st.next = Math.min(t.st.next, Math.max(ctx.currentTime, t.st.lastEnd || 0) + randomPause(t)); };
     // an impossible entry goes back to what was there before, never to some default
@@ -746,7 +744,7 @@ async function loadTrack(t) {
   const me = cur;
   try {
     t.buffer = await loadBuffer(t.file);
-    if (t.seamless && t.mode === 'loop') t.loopBuf = makeSeamless(t.buffer, t.fade);
+    if (t.seamless && t.mode === 'loop') t.loopBuf = makeSeamless(t.buffer, SEAM_JOIN);
   } catch (e) { t.missing = true; }
   if (cur !== me || !cur.tracks.includes(t)) return false;
   showLoaded(t);

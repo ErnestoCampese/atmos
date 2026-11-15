@@ -368,6 +368,7 @@ function fadeLen(t, d) {
 }
 /* Seamless loop: trims the silence, picks the cut point that sounds most like the start
    and blends the tail into the start, so the end of the sound flows exactly into its beginning. */
+const SEAM_JOIN = 3;   // seconds over which the end is blended into the start (less for a short sound): the same for every loop
 function makeSeamless(buf, fadeSec) {
   const sr = buf.sampleRate, C = buf.numberOfChannels, len = buf.length;
   const ch = []; for (let c = 0; c < C; c++) ch.push(buf.getChannelData(c));
@@ -423,7 +424,7 @@ function makeSeamless(buf, fadeSec) {
 const isSeamless = t => t.mode === 'loop' && t.seamless && t.loopBuf;
 function applySeamless(t) {
   if (!t.buffer) return;
-  t.loopBuf = t.seamless ? makeSeamless(t.buffer, t.fade) : null;
+  t.loopBuf = t.seamless ? makeSeamless(t.buffer, SEAM_JOIN) : null;
   if (t.seamless && !t.loopBuf) { t.seamless = false; toast('This sound is too short to loop seamlessly. It needs at least 1.5 seconds without silence.', { kind: 'warn', ms: 5000 }); }
   if (playing && t.st) resetTrack(t, ctx.currentTime + 0.05);
   retest(t);
