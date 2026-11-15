@@ -119,9 +119,36 @@ function impulse(context, type = 'cathedral') {
 function setReverbType(t, n = t.nodes, context = ctx) {
   // a new convolver for the new space, then the old one is unplugged
   const conv = context.createConvolver(); conv.normalize = false; conv.buffer = impulse(context, t.revType);
-  n.revSend.connect(conv); conv.connect(n.pan);
+  n.revSend.connect(conv); conv.connect(n.tail);
   const old = n.conv; n.conv = conv;
   if (old) { try { n.revSend.disconnect(old); } catch (e) {} setTimeout(() => { try { old.disconnect(); } catch (e) {} }, 300); }
+}
+// "ping-pong" echo: left → right → left…, each repeat a little darker and quieter
+function wireEcho(n, context) {
+  n.dL = context.createDelay(3); n.dR = context.createDelay(3);
+  n.dampL = context.createBiquadFilter(); n.dampL.type = 'lowpass'; n.dampL.frequency.value = 3200;
+  n.dampR = context.createBiquadFilter(); n.dampR.type = 'lowpass'; n.dampR.frequency.value = 3200;
+  n.fbL = context.createGain(); n.fbR = context.createGain();
+  n.echoMerge = context.createChannelMerger(2);
+  n.dlSend.connect(n.dL);
+  n.dL.connect(n.dampL); n.dampL.connect(n.fbL); n.fbL.connect(n.dR);
+  n.dR.connect(n.dampR); n.dampR.connect(n.fbR); n.fbR.connect(n.dL);
+  n.dL.connect(n.echoMerge, 0, 0); n.dR.connect(n.echoMerge, 0, 1); n.echoMerge.connect(n.tail);
+}
+/* Stopping by hand means silence: the echo still travelling and the space still ringing are cut short too.
+   Only where the writer presses stop (the composition's button, or a sound's own): a sound that ends by itself
+   keeps its echo and its tail, which is the whole point of them. The old lines are thrown away and new, empty
+   ones take their place, so nothing of what was cut comes back at the next play. `silent`: nothing can be heard
+   at this moment (the whole mix has already faded), so the old lines go at once; otherwise they fade for an instant. */
+function cutTails(t, silent) {
+  const n = t.nodes; if (!n || !n.tail) return;
+  const old = { tail: n.tail, conv: n.conv, fbL: n.fbL, fbR: n.fbR };
+  try { n.revSend.disconnect(n.conv); n.dlSend.disconnect(n.dL); } catch (e) {}
+  const drop = () => { try { old.tail.disconnect(); old.conv.disconnect(); old.fbL.disconnect(); old.fbR.disconnect(); } catch (e) {} };
+  if (silent) drop(); else { old.tail.gain.setTargetAtTime(0, ctx.currentTime, 0.012); setTimeout(drop, 150); }
+  n.tail = ctx.createGain(); n.tail.connect(n.pan);
+  n.conv = null; setReverbType(t);
+  wireEcho(n, ctx); applyFx(t, n, ctx, true);
 }
 function buildChain(t, context, dest) {
   const n = {};
@@ -132,20 +159,13 @@ function buildChain(t, context, dest) {
   n.dry = context.createGain();
   n.revSend = context.createGain();
   n.dlSend = context.createGain();
-  n.dL = context.createDelay(3); n.dR = context.createDelay(3);
-  n.dampL = context.createBiquadFilter(); n.dampL.type = 'lowpass'; n.dampL.frequency.value = 3200;
-  n.dampR = context.createBiquadFilter(); n.dampR.type = 'lowpass'; n.dampR.frequency.value = 3200;
-  n.fbL = context.createGain(); n.fbR = context.createGain();
-  n.echoMerge = context.createChannelMerger(2);
   n.pan = context.createStereoPanner(); n.pan.pan.value = t.pan;
+  // what rings on after the sound (its space and its echo) leaves through one gate, so it can be cut short
+  n.tail = context.createGain(); n.tail.connect(n.pan);
   n.gain.connect(n.lp); n.lp.connect(n.hp); n.hp.connect(n.trem);
   n.trem.connect(n.dry); n.dry.connect(n.pan);
   n.trem.connect(n.revSend); setReverbType(t, n, context);
-  // "ping-pong" echo: left → right → left…, each repeat a little darker and quieter
-  n.trem.connect(n.dlSend); n.dlSend.connect(n.dL);
-  n.dL.connect(n.dampL); n.dampL.connect(n.fbL); n.fbL.connect(n.dR);
-  n.dR.connect(n.dampR); n.dampR.connect(n.fbR); n.fbR.connect(n.dL);
-  n.dL.connect(n.echoMerge, 0, 0); n.dR.connect(n.echoMerge, 0, 1); n.echoMerge.connect(n.pan);
+  n.trem.connect(n.dlSend); wireEcho(n, context);
   n.pan.connect(dest);
   // slow oscillators for "Waves" (volume) and "Movement" (stereo)
   n.tremLfo = context.createOscillator(); n.tremLfo.frequency.value = 0.11; n.tremDepth = context.createGain();
@@ -182,7 +202,10 @@ function fxValueText(t, k) {
   const how = v >= 100 ? 'Side to side' : v >= 70 ? 'Wide' : v >= 35 ? 'Halfway' : 'Slight';
   return how + (t.trajRand ? ', random' : '');
 }
-const fxCount = t => Object.values(t.fx).filter(v => v > 0).length;
+/* "Passing by" moves the sound across each time it plays. A seamless loop never plays again, so there is nothing
+   to pass: the effect is left out of it, its amount kept for when the loop is no longer seamless. */
+const noPassing = t => t.mode === 'loop' && t.seamless;
+const fxCount = t => Object.entries(t.fx).filter(([k, v]) => v > 0 && !(k === 'trajectory' && noPassing(t))).length;
 function refreshGains() {
   if (!cur) return;
   cur.tracks.forEach(t => {
@@ -291,7 +314,7 @@ function trajConnect(t, context, node, dest, when, d, loopLen) {
   if (!tr) { node.connect(dest); return null; }
   const p = context.createStereoPanner();
   if (loopLen) {
-    // seamless loop (∞): sways gently back and forth, one crossing per lap
+    // a sound listened to on its own repeats without end: it sways gently back and forth, one crossing per lap
     const osc = context.createOscillator(); osc.type = 'triangle'; osc.frequency.value = 1 / (2 * loopLen);
     const depth = context.createGain(); depth.gain.value = tr.to;
     osc.connect(depth); depth.connect(p.pan); osc.start(when);
@@ -306,9 +329,9 @@ function trajConnect(t, context, node, dest, when, d, loopLen) {
 function playOne(t, context, dest, when, sources) {
   if (isSeamless(t)) {
     const src = context.createBufferSource(); src.buffer = t.loopBuf; src.loop = true;
-    const tp = trajConnect(t, context, src, dest, when, 0, t.loopBuf.duration);
+    src.connect(dest);
     src.start(when);
-    if (sources) { sources.add(src); src.onended = () => { sources.delete(src); if (tp && tp.osc) try { tp.osc.stop(); } catch (e) {} }; noteHit(t, when, Infinity, t.loopBuf.duration); }
+    if (sources) { sources.add(src); src.onended = () => sources.delete(src); noteHit(t, when, Infinity, t.loopBuf.duration); }
     return;
   }
   let rate = 1, level = 1;
@@ -399,7 +422,7 @@ function stop() {
   master.gain.setTargetAtTime(0, ctx.currentTime, 0.08);
   setTimeout(() => {
     if (token !== stopToken) return;
-    if (c) c.tracks.forEach(t => { stopSources(t); t.st = null; });
+    if (c) c.tracks.forEach(t => { stopSources(t); t.st = null; cutTails(t, true); });
     master.gain.cancelScheduledValues(ctx.currentTime);
     master.gain.setValueAtTime(c ? c.volume : 0.8, ctx.currentTime);
   }, 450);
@@ -508,6 +531,8 @@ function stopTrackTest(t) {
   const p = t.pv; t.pv = null;
   try { p.src.stop(); } catch (e) {}
   setTimeout(() => { try { p.g.disconnect(); } catch (e) {} }, 100);
+  // its echo and its space stop with it, unless the composition is playing and the same lines carry its sound there
+  if (!playing) cutTails(t);
   setTestBtn(t);
   updateProg(t, ctx.currentTime);
 }
@@ -524,7 +549,7 @@ function trackTest(t) {
   // The preview repeats until you stop it. While you are adjusting volume, position or an effect,
   // the sound has to still be there — otherwise every change means pressing play again.
   src.loop = true;
-  const tp = trajConnect(t, ctx, src, g, when, buf.duration, buf.duration);
+  const tp = seam ? (src.connect(g), null) : trajConnect(t, ctx, src, g, when, buf.duration, buf.duration);
   src.start(when);
   t.pv = { src, g, start: when, dur: Infinity, loop: buf.duration };
   src.onended = () => { if (tp && tp.osc) try { tp.osc.stop(); } catch (e) {} if (t.pv && t.pv.src === src) stopTrackTest(t); };

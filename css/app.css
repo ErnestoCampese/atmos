@@ -252,11 +252,12 @@ html.opening .comp:not(.opening){pointer-events:none}
 .sky[data-view="vEditor"]{opacity:.55}
 .sky[data-view="vEditor"] .stars,.sky[data-view="vEditor"] .glow i,.sky[data-view="vEditor"] .near>i{animation-play-state:paused}
 .sky[data-view="vEditor"] .comet{display:none}
-/* A composition's own cover, blurred, behind its page: there only where the writer turned it on (the button on
-   the cover). It lies under the stars, reaches past the window so its soft edge is never seen, and is dimmed by
-   the script (--dim) according to how light the picture is, so the words on the night stay readable over it. */
-.wash{position:fixed;inset:-96px;z-index:-3;pointer-events:none;background:50% 50%/cover no-repeat;
-  filter:blur(64px) saturate(1.2) brightness(var(--dim,.2));opacity:0;transition:opacity .8s var(--ease)}
+/* A composition's own cover behind its page: there only where the writer turned it on (the button on the cover).
+   The picture is to be recognised, so it is only softened a little, and darkened instead: the script sets --dim
+   according to how light the picture is, so the words on the night stay readable over it. It lies under the
+   stars and reaches a little past the window, so its soft edge is never seen. */
+.wash{position:fixed;inset:-24px;z-index:-3;pointer-events:none;background:50% 50%/cover no-repeat;
+  filter:blur(6px) saturate(1.1) brightness(var(--dim,.2));opacity:0;transition:opacity .8s var(--ease)}
 .wash.on{opacity:1}
 
 /* ---------- your compositions: the catalogue ---------- */
@@ -840,6 +841,12 @@ input[type=range]:disabled{cursor:not-allowed;--fill:var(--mute);--rail:var(--ru
 /* the choice that belongs to an effect ends its sentence, and is there only while the effect is on */
 .fx-kind{white-space:nowrap}
 .fx-row:not(.is-on) .fx-kind,.fx-row.is-on .fx-rest{display:none}
+/* an effect that cannot apply to the way the sound plays stands aside like any disabled control (no ground, no chosen
+   plate, pencil words) and its sentence says why */
+.fx-row.is-idle .fx-name{color:var(--mute)}
+.fx-row.is-idle .fx-amt{background:transparent}
+.fx-row.is-idle .fx-amt .seg-pill{display:none}
+.fx-row.is-idle .fx-amt button:disabled{color:var(--mute);cursor:not-allowed}
 select.kind{field-sizing:content;height:28px;margin-left:var(--s1);padding:0 var(--s5) 0 var(--s2);font-size:12px;font-weight:500;background-position:right var(--s1) center;vertical-align:middle}
 /* what is done with the sound itself, on the fold at the foot: keep it at one end, take it away at the other */
 .dfoot{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);flex-wrap:wrap;padding:var(--s3) var(--pad);border-top:1px dashed var(--rule)}

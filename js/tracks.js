@@ -147,13 +147,16 @@ function renderTrack(t) {
     trajectory: `<select class="kind trajdir" aria-label="Which way it passes">${Object.entries(TRAJ).map(([v, l]) => `<option value="${v}" ${!t.trajRand && t.trajDir === v ? 'selected' : ''}>${l.toLowerCase()}</option>`).join('')}<option value="rand" ${t.trajRand ? 'selected' : ''}>by chance</option></select>`
   };
   const fxRow = ([k, label, hint]) => {
-    const at = amountAt(k, t.fx[k] || 0), say = FX_SAY[k];
+    // "Passing by" has nothing to do in a seamless loop: it stands aside, saying why, and keeps its amount for later
+    const idle = k === 'trajectory' && noPassing(t);
+    const at = idle ? 0 : amountAt(k, t.fx[k] || 0), say = idle ? null : FX_SAY[k];
+    if (idle) hint = 'A seamless loop never starts again, so nothing passes by. Movement makes it drift from side to side instead.';
     return `
-            <div class="fx-row${at ? ' is-on' : ''}" data-fx="${k}">
+            <div class="fx-row${at ? ' is-on' : ''}${idle ? ' is-idle' : ''}" data-fx="${k}">
               <span class="fx-name" id="${did}-${k}">${label}</span>
-              <div class="seg fill fx-amt" role="radiogroup" aria-labelledby="${did}-${k}" data-k="${k}"><span class="seg-pill" aria-hidden="true"></span>${amountsOf(k).map(([v, w], i) =>
-                `<button type="button" role="radio" aria-checked="${i === at}" tabindex="${i === at ? 0 : -1}" data-v="${v}"${i === at ? ' class="on"' : ''}>${w}</button>`).join('')}</div>
-              <p class="fx-hint">${say ? `${esc(say[0])}<span class="fx-kind">${esc(say[1])} ${kind[k]}</span><span class="fx-rest">${esc(say[2])}</span>` : esc(FX_TEXT[k] || hint)}</p>
+              <div class="seg fill fx-amt" role="radiogroup" aria-labelledby="${did}-${k}" data-k="${k}"${idle ? ' aria-disabled="true"' : ''}><span class="seg-pill" aria-hidden="true"></span>${amountsOf(k).map(([v, w], i) =>
+                `<button type="button" role="radio" aria-checked="${i === at}" tabindex="${i === at ? 0 : -1}" data-v="${v}"${i === at ? ' class="on"' : ''}${idle ? ' disabled' : ''}>${w}</button>`).join('')}</div>
+              <p class="fx-hint">${say ? `${esc(say[0])}<span class="fx-kind">${esc(say[1])} ${kind[k]}</span><span class="fx-rest">${esc(say[2])}</span>` : esc(idle ? hint : FX_TEXT[k] || hint)}</p>
             </div>`;
   };
   const where = placeOf(t);
@@ -289,7 +292,7 @@ function renderTrack(t) {
   };
   q('.revtype').onchange = e => { t.revType = e.target.value; setReverbType(t); handMade(t); markDirty(); };
   q('.echotype').onchange = e => { t.echoType = e.target.value; applyFx(t); handMade(t); markDirty(); };
-  q('.trajdir').onchange = e => { t.trajRand = e.target.value === 'rand'; if (!t.trajRand) t.trajDir = e.target.value; markDirty(); };
+  if (q('.trajdir')) q('.trajdir').onchange = e => { t.trajRand = e.target.value === 'rand'; if (!t.trajRand) t.trajDir = e.target.value; markDirty(); };
   /* an amount is chosen like a word in a list: a click, or the arrow keys once it has the focus */
   el.querySelectorAll('.fx-amt').forEach(seg => {
     const k = seg.dataset.k, bs = [...seg.querySelectorAll('button')];

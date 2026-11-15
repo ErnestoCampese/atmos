@@ -305,15 +305,15 @@ function setCover(url) {
   $('coverBg').hidden = !url;
   setWash();
 }
-/* The cover, blurred, behind the whole composition: only where the writer asked for it, with the small button
-   on the cover. The picture is dimmed by its own brightest part, so a pale cover is held back more than a
-   dark one and the words set on the night keep their contrast over any picture. */
+/* The cover behind the whole composition, darkened but still to be recognised: only where the writer asked for
+   it, with the small button on the cover. The picture is dimmed by its own brightest part, so a pale cover is
+   held back more than a dark one and the words set on the night keep their contrast over any picture. */
 const WASH_TOP = 0.05;   // the most light the blurred picture may give off (relative luminance, 0 to 1)
 function washDim(im) {
   try {
-    const c = document.createElement('canvas'); c.width = c.height = 16;
-    const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(im, 0, 0, 16, 16);
-    const d = g.getImageData(0, 0, 16, 16).data, lin = v => (v /= 255) <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4;
+    const c = document.createElement('canvas'); c.width = c.height = 48;
+    const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(im, 0, 0, 48, 48);
+    const d = g.getImageData(0, 0, 48, 48).data, lin = v => (v /= 255) <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4;
     let top = 0;
     for (let i = 0; i < d.length; i += 4) top = Math.max(top, .2126 * lin(d[i]) + .7152 * lin(d[i + 1]) + .0722 * lin(d[i + 2]));
     return Math.min(1, (WASH_TOP / Math.max(top, 1e-4)) ** (1 / 2.2));
@@ -322,7 +322,7 @@ function washDim(im) {
 function setWash() {
   const w = $('wash'), b = $('coverBg'), on = !!(cur && cur.coverBg);
   b.setAttribute('aria-pressed', on);
-  b.title = on ? 'Take the cover away from behind the page' : 'Show the cover, blurred, behind the whole page';
+  b.title = on ? 'Take the cover away from behind the page' : 'Show the cover, darkened, behind the whole page';
   const want = () => cur && cur.coverBg && !$('vEditor').hidden ? cur.coverUrl : null;
   const url = want();
   if (!url) { w.classList.remove('on'); return; }
