@@ -86,19 +86,22 @@ Your sounds are never touched by any of this.
 
 ## Sounds and effects
 
-Each sound in a composition has its own volume, its own position between left and right, and its
-own way of playing:
+Each sound in a composition has its own volume, its own place around you, and its own way of
+playing:
 
 - **Continuous** — it loops without stopping. Turn on **Loop seamlessly** and αtmos finds the point
   where the end flows back into the beginning, so there is no seam to hear.
 - **At intervals** — it plays every so many seconds.
 - **At random** — it plays at unpredictable moments, roughly as often as you ask.
 
-**Settings**, at the end of a sound's line, opens its panel. *Where it is* offers eight ready-made
-places, such as *Behind a window*, *In a cathedral*, *Across a valley* or *Under water*. Pick one
-and the seven effects under it are set to match; from there you can change any of them, choosing
-how much in words: *Off*, *A little*, *Medium*, *Strong*. *No effects*, first in the list, turns
-every effect off. The ▶ button on a sound plays that sound on its own, over and over, so you can
+**Settings**, at the end of a sound's line, opens its panel. *Where it is* is a grid with a listener
+in the middle: drag the dot and the sound goes there, to the left or right, ahead or behind, near or
+far, with *Below*, *Level* or *Above* under it. In the middle the sound is all around you. Sounds are
+placed the way two ears hear them, so this is best heard with headphones. Beside the grid are the
+effects, each in plain words: *Space* and *Rise and fall* by how much (*Off*, *A little*, *Medium*,
+*Strong*), *Echo* on a slider, *Heard through* a curtain, a window, a wall or water, *Played on* a
+radio or a telephone, and *How it moves*: it stays, wanders, circles around you, or passes by each
+time it plays. The ▶ button on a sound plays that sound on its own, over and over, so you can
 hear a change as you make it; **Only this** silences every other sound while the composition plays.
 
 ## Freesound

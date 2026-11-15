@@ -44,10 +44,16 @@ watchSeg($('homeTabs')); watchSeg($('libTabs'));
    name in the writer's type with a line of status, a silence switch with its volume, and an opener
    that says in words what is inside. Everything else lives in the drawer under the line, opened by
    the opener and by nothing else: a click on the line itself does nothing. */
-/* which side, in words like the effects: nobody has to know what "Left 40" sounds like */
-const panLabel = v => {
-  const n = Math.round(Math.abs(v) * 100), side = v < 0 ? 'left' : 'right';
-  return n < 5 ? 'Centre' : n < 35 ? 'Slightly ' + side : n < 85 ? side.charAt(0).toUpperCase() + side.slice(1) : 'Far ' + side;
+/* where it is, in words like the effects: nobody has to know what "x 40, y -70" sounds like */
+const DIRS = ['Ahead', 'Ahead right', 'Right', 'Behind right', 'Behind', 'Behind left', 'Left', 'Ahead left'];
+const posLabel = t => {
+  const r = Math.hypot(t.pos.x, t.pos.y), h = t.height || 0;
+  const up = h > 0 ? 'above' : h < 0 ? 'below' : '';
+  // left on the listener, a sound that moves still has a path: the one drawn on the grid, close by
+  if (r < 0.05) return wandering(t) ? ['Close around you', up].filter(Boolean).join(' · ') : passing(t) ? ['Close by', up].filter(Boolean).join(' · ')
+    : h > 0 ? 'Right above you' : h < 0 ? 'Right below you' : 'All around you';
+  const dir = DIRS[(Math.round(Math.atan2(t.pos.x, t.pos.y) / (Math.PI / 4)) + 8) % 8];
+  return [dir, r < 0.35 ? 'close' : r < 0.8 ? '' : 'far', up].filter(Boolean).join(' · ');
 };
 const missingLine = t => `<p class="warn"><b>File not found:</b> <span>${esc(t.file.split('/').pop())} is no longer in your sounds folder.</span>
        <button class="ghost sm relink">Find the file</button>
@@ -57,47 +63,74 @@ function wireMissing(t, el) {
   el.querySelector('.dropit').onclick = () => removeTrack(t);
 }
 const num2 = i => String(i + 1).padStart(2, '0');
-const OWN_MIX = 'Your own place';
-/* under the name, in words: how it plays, then the place it is in or how many effects it has */
-function fxWords(t) {
-  const w = placeOf(t), n = fxCount(t);
-  return w && w !== 'none' ? PLACES.find(p => p[0] === w)[1] : n ? plural(n, 'effect', 'effects') : '';
-}
+/* under the name, in words: how it plays, then how many effects it has */
+const fxWords = t => { const n = fxCount(t); return n ? plural(n, 'effect', 'effects') : ''; };
 const openerText = t => MODES[t.mode] + (fxWords(t) ? ' · ' + fxWords(t) : '');
 const muteIcon = on => on ? ICO.volX : ICO.vol;
 /* How much of an effect, chosen among its words: each word is a set amount. An amount saved earlier
    that lies between two words shows the nearer one and keeps sounding as it is until another is chosen. */
 const AMOUNTS = [[0, 'Off'], [22, 'A little'], [50, 'Medium'], [80, 'Strong']];
-const PASSING = [[0, 'Off'], [20, 'Slight'], [50, 'Halfway'], [100, 'Side to side']];
-const amountsOf = k => k === 'trajectory' ? PASSING : AMOUNTS;
-const amountAt = (k, v) => !v ? 0 : k === 'trajectory' ? (v < 35 ? 1 : v < 75 ? 2 : 3) : (v < 34 ? 1 : v < 67 ? 2 : 3);
-/* What each effect does. Where an effect has a choice of its own (which space, how far, which way), the sentence
-   ends in that choice once the effect is on; while it is off the sentence ends in plain words: [start, on, off] */
-const FX_SAY = {
-  reverb: ['Lingers after it stops, as in', '', ' a hall or a cave'],
-  echo: ['Repeats that bounce left and right and slowly die away', ', as from', ''],
-  trajectory: ['Each time it plays, it moves across like something passing', ',', '']
+/* Two effects are told by what they resemble, not by how much: what stands between you and the sound, and what it
+   is played on */
+const THROUGH = [[0, 'Off'], [30, 'A curtain'], [62, 'A window'], [78, 'A wall'], [90, 'Water']];
+const PLAYED = [[0, 'Off'], [55, 'A radio'], [90, 'A telephone']];
+const amountsOf = k => k === 'muffled' ? THROUGH : k === 'thin' ? PLAYED : AMOUNTS;
+const amountAt = (k, v) => { if (!v) return 0; const a = amountsOf(k); let at = 1; for (let i = 2; i < a.length; i++) if (Math.abs(a[i][0] - v) < Math.abs(a[at][0] - v)) at = i; return at; };
+/* What each effect does. The space has a choice of its own (which space): its sentence ends in that choice once the
+   effect is on; while it is off the sentence ends in plain words: [start, on, off] */
+const FX_SAY = { reverb: ['Lingers after it stops, as in', '', ' a hall or a cave'] };
+const FX_TEXT = {
+  echo: 'Repeats that bounce left and right and slowly die away',
+  muffled: 'Dulled, as when something stands between you and the sound',
+  thin: 'Small and thin, as out of a little speaker',
+  waves: 'Slowly louder and softer on its own, like breathing'
 };
-const FX_TEXT = { muffled: 'Takes the brightness away: far off, behind a window' };
-const ECHO_FROM = { near: 'nearby walls', valley: 'a valley', mountain: 'a mountain' };
-/* which side: a listener seen from the front under half a circle, the sound a dot on it. The dot is dragged along
-   the arc; the same setting is a slider for the keyboard and for screen readers, kept out of sight */
-const SIDE_FIG = `<svg class="side-fig" viewBox="0 0 200 112" width="200" height="112" aria-hidden="true" focusable="false">
-  <rect class="sf-hit" width="200" height="112"/>
-  <path class="sf-arc" d="M18 96A82 82 0 0 1 182 96"/>
-  <text class="sf-lr" x="2" y="100">L</text><text class="sf-lr" x="198" y="100" text-anchor="end">R</text>
-  <g class="sf-l"><path d="M80 51a11 11 0 0 0 0 15"/><path d="M74 46a17 17 0 0 0 0 25"/></g>
-  <g class="sf-r"><path d="M120 51a11 11 0 0 1 0 15"/><path d="M126 46a17 17 0 0 1 0 25"/></g>
-  <path class="sf-body" d="M86 53a4 6 0 0 0 0 11M114 53a4 6 0 0 1 0 11M70 96c1-8 12-12 24-14v-8M130 96c-1-8-12-12-24-14v-8"/>
-  <ellipse class="sf-body" cx="100" cy="58" rx="14" ry="17"/>
-  <g class="sf-dot"><circle r="8"/><circle r="3.5"/></g>
+/* How it moves: it stays, it wanders around its place all the time, or it passes by each time it plays */
+const MOVES = [['still', 'Stays where it is'], ['little', 'Wanders a little'], ['wide', 'Wanders widely'], ['round', 'Circles around you'],
+  ['lr', 'Passes by, left to right'], ['rl', 'Passes by, right to left'], ['pp', 'Passes by, back and forth'], ['rand', 'Passes by, either way']];
+const WANDER = { little: 22, wide: 50, round: 80 };
+const moveOf = t => passing(t) ? (t.trajRand ? 'rand' : t.trajDir) : wanderKind(wandering(t)) || 'still';
+const moveSay = t => {
+  const m = moveOf(t);
+  const say = m === 'still' ? 'It keeps to the place you gave it' : m === 'little' ? 'Drifts slowly to either side of its place, all the time'
+    : m === 'wide' ? 'Drifts slowly, far to either side of its place' : m === 'round' ? 'Goes slowly all the way around you, again and again'
+    : 'Each time it plays it comes from far off, passes through its place and goes';
+  return say;
+};
+/* where it is: the listener in the middle of a grid, seen from behind, the sound a dot dragged around them. Ahead is
+   up. What the sound does on its own (wandering, passing by) is drawn as the path it takes. */
+const PAD = 240, PAD_R = 104, PAD_C = PAD / 2;
+const PAD_FIG = `<svg class="pad-fig" viewBox="0 0 ${PAD} ${PAD}" aria-hidden="true" focusable="false">
+  <path class="pf-grid" d="${[30, 60, 90, 150, 180, 210].map(v => `M${v} 0V${PAD}M0 ${v}H${PAD}`).join('')}"/>
+  <path class="pf-axis" d="M${PAD_C} 24V96M${PAD_C} 148V${PAD - 24}M24 ${PAD_C}H96M144 ${PAD_C}H${PAD - 24}"/>
+  <text class="pf-w" x="${PAD_C}" y="16" text-anchor="middle">ahead</text><text class="pf-w" x="${PAD_C}" y="${PAD - 8}" text-anchor="middle">behind</text>
+  <text class="pf-w" x="8" y="${PAD_C + 4}">L</text><text class="pf-w" x="${PAD - 8}" y="${PAD_C + 4}" text-anchor="end">R</text>
+  <circle class="pf-all" cx="${PAD_C}" cy="${PAD_C}" r="30"/>
+  <path class="pf-move" d=""/><path class="pf-head" d=""/>
+  <g class="pf-you" transform="translate(${PAD_C} ${PAD_C}) scale(.64) translate(-100 -62)"><path d="M86 53a4 6 0 0 0 0 11M114 53a4 6 0 0 1 0 11M70 96c1-8 12-12 24-14v-8M130 96c-1-8-12-12-24-14v-8"/><ellipse cx="100" cy="58" rx="14" ry="17"/></g>
+  <g class="pf-dot"><circle r="8"/><circle r="3.5"/></g>
 </svg>`;
-function paintSide(t, el = t.el) {
-  const fig = el && el.querySelector('.side-fig'); if (!fig) return;
-  const p = Math.max(-1, Math.min(1, t.pan)), a = p * Math.PI / 2;
-  fig.querySelector('.sf-dot').setAttribute('transform', `translate(${(100 + 82 * Math.sin(a)).toFixed(1)} ${(96 - 82 * Math.cos(a)).toFixed(1)})`);
-  fig.querySelector('.sf-l').style.opacity = (0.3 + 0.7 * (1 - p) / 2).toFixed(2);
-  fig.querySelector('.sf-r').style.opacity = (0.3 + 0.7 * (1 + p) / 2).toFixed(2);
+const HEIGHTS = [[-1, 'Below'], [0, 'Level'], [1, 'Above']];
+function paintPad(t, el = t.el) {
+  const pad = el && el.querySelector('.pad'); if (!pad) return;
+  const X = v => (PAD_C + v * PAD_R).toFixed(1), Y = v => (PAD_C - v * PAD_R).toFixed(1);
+  const x = t.pos.x, y = t.pos.y, r = Math.hypot(x, y), m = moveOf(t), say = posLabel(t);
+  pad.querySelector('.pf-dot').setAttribute('transform', `translate(${X(x)} ${Y(y)})`);
+  pad.classList.toggle('is-all', r < 0.05 && !t.height && m === 'still');
+  let d = '', heads = '';
+  if (m in WANDER) {
+    // the arc it wanders along, at the distance the sound itself keeps (never nearer than three metres)
+    const R = Math.max(r, 0.3) * PAD_R, th = r < 0.01 ? 0 : Math.atan2(x, y), A = m === 'round' ? Math.PI : SWAY[m];
+    const at = a => `${(PAD_C + R * Math.sin(a)).toFixed(1)} ${(PAD_C - R * Math.cos(a)).toFixed(1)}`;
+    d = m === 'round' ? `M${at(0)}A${R} ${R} 0 1 1 ${at(Math.PI)}A${R} ${R} 0 1 1 ${at(0)}` : `M${at(th - A)}A${R} ${R} 0 0 1 ${at(th + A)}`;
+  } else if (m !== 'still') {
+    // the line it passes along, with a head at each end it travels to
+    const yy = Y(Math.abs(y) < 0.15 ? (y < 0 ? -0.15 : 0.15) : y), a = 8, b = PAD - 8;
+    d = `M${a} ${yy}H${b}`; heads = (m !== 'rl' ? `M${b - 6} ${yy - 4}l6 4-6 4` : '') + (m !== 'lr' ? `M${a + 6} ${yy - 4}l-6 4 6 4` : '');
+  }
+  pad.querySelector('.pf-move').setAttribute('d', d); pad.querySelector('.pf-head').setAttribute('d', heads);
+  pad.setAttribute('aria-valuetext', say);
+  el.querySelector('.pos-say').textContent = say;
 }
 function renderTrack(t) {
   const el = document.createElement('div');
@@ -141,25 +174,33 @@ function renderTrack(t) {
     </div>
     ${varyOpts}`;
   const options = (obj, sel, label = v => v.label) => Object.entries(obj).map(([v, o]) => `<option value="${v}" ${sel === v ? 'selected' : ''}>${label(o)}</option>`).join('');
-  const kind = {
-    reverb: `<select class="kind revtype" aria-label="Kind of space">${options(SPACES, t.revType, o => 'a ' + o.label.toLowerCase())}</select>`,
-    echo: `<select class="kind echotype" aria-label="Where the echo comes from">${Object.keys(ECHOES).map(v => `<option value="${v}" ${t.echoType === v ? 'selected' : ''}>${ECHO_FROM[v] || ECHOES[v].label}</option>`).join('')}</select>`,
-    trajectory: `<select class="kind trajdir" aria-label="Which way it passes">${Object.entries(TRAJ).map(([v, l]) => `<option value="${v}" ${!t.trajRand && t.trajDir === v ? 'selected' : ''}>${l.toLowerCase()}</option>`).join('')}<option value="rand" ${t.trajRand ? 'selected' : ''}>by chance</option></select>`
-  };
-  const fxRow = ([k, label, hint]) => {
-    // "Passing by" has nothing to do in a seamless loop: it stands aside, saying why, and keeps its amount for later
-    const idle = k === 'trajectory' && noPassing(t);
-    const at = idle ? 0 : amountAt(k, t.fx[k] || 0), say = idle ? null : FX_SAY[k];
-    if (idle) hint = 'A seamless loop never starts again, so nothing passes by. Movement makes it drift from side to side instead.';
+  const revKind = `<select class="kind revtype" aria-label="Kind of space">${options(SPACES, t.revType, o => 'a ' + o.label.toLowerCase())}</select>`;
+  /* a line of the table: the name, the control right beside it, then what it does. Most effects are an amount in
+     words; the echo is a slider; how it moves is a choice among sentences */
+  const fxRow = ([k, label]) => {
+    const v = t.fx[k] || 0, by = `aria-labelledby="${did}-${k}"`;
+    let on = v > 0, ctl, hint = esc(FX_TEXT[k] || '');
+    if (k === 'echo') {
+      ctl = `<div class="fx-slide"><input type="range" class="echo" min="0" max="100" value="${v}" ${by} aria-valuetext="${fxWord(v)}"><span class="val ev">${fxWord(v)}</span></div>`;
+    } else if (k === 'movement') {
+      const m = moveOf(t); on = m !== 'still';
+      // a seamless loop never starts again, so it cannot pass by: those ways stay in the list, set aside under the reason
+      const opt = ([id, l]) => `<option value="${id}" ${m === id ? 'selected' : ''}>${l}</option>`, idle = noPassing(t);
+      ctl = `<select class="moves" ${by}>${MOVES.slice(0, 4).map(opt).join('')}${idle ? '<optgroup label="Not for a seamless loop" disabled>' : ''}${MOVES.slice(4).map(opt).join('')}${idle ? '</optgroup>' : ''}</select>`;
+      hint = esc(moveSay(t));
+    } else {
+      const at = amountAt(k, v), say = FX_SAY[k];
+      ctl = `<div class="seg fill fx-amt" role="radiogroup" ${by} data-k="${k}"><span class="seg-pill" aria-hidden="true"></span>${amountsOf(k).map(([a, w], i) =>
+        `<button type="button" role="radio" aria-checked="${i === at}" tabindex="${i === at ? 0 : -1}" data-v="${a}"${i === at ? ' class="on"' : ''}>${w}</button>`).join('')}</div>`;
+      if (say) hint = `${esc(say[0])}<span class="fx-kind">${esc(say[1])} ${revKind}</span><span class="fx-rest">${esc(say[2])}</span>`;
+    }
     return `
-            <div class="fx-row${at ? ' is-on' : ''}${idle ? ' is-idle' : ''}" data-fx="${k}">
+            <div class="fx-row${on ? ' is-on' : ''}" data-fx="${k}">
               <span class="fx-name" id="${did}-${k}">${label}</span>
-              <div class="seg fill fx-amt" role="radiogroup" aria-labelledby="${did}-${k}" data-k="${k}"${idle ? ' aria-disabled="true"' : ''}><span class="seg-pill" aria-hidden="true"></span>${amountsOf(k).map(([v, w], i) =>
-                `<button type="button" role="radio" aria-checked="${i === at}" tabindex="${i === at ? 0 : -1}" data-v="${v}"${i === at ? ' class="on"' : ''}${idle ? ' disabled' : ''}>${w}</button>`).join('')}</div>
-              <p class="fx-hint">${say ? `${esc(say[0])}<span class="fx-kind">${esc(say[1])} ${kind[k]}</span><span class="fx-rest">${esc(say[2])}</span>` : esc(idle ? hint : FX_TEXT[k] || hint)}</p>
+              ${ctl}
+              <p class="fx-hint">${hint}</p>
             </div>`;
   };
-  const where = placeOf(t);
   const nameAttr = esc(t.name);
   el.innerHTML = `
     <span class="tbg" aria-hidden="true"></span>
@@ -182,31 +223,26 @@ function renderTrack(t) {
     <div class="fxp" id="${did}" role="region" aria-label="Settings of ${nameAttr}">
       <div class="fxp-in">
         <div class="fx-body">
-          <div class="fx-own">
-            <div class="fx-cell fx-how">
-              <h4>How it plays</h4>
-              <select class="plays" aria-label="How ${nameAttr} plays">${Object.entries(MODES).map(([m, label]) => `<option value="${m}" ${t.mode === m ? 'selected' : ''}>${label}</option>`).join('')}</select>
-              ${t.mode === 'loop' ? `<label class="check" title="Trims the silence and any fade at each end, and joins the sound where its end is most like its start, so you can’t hear it begin again"><input type="checkbox" class="seam" ${t.seamless ? 'checked' : ''} ${t.buffer ? '' : 'disabled'}> Loop seamlessly</label>` : ''}
-              ${{ loop: loopOpts, interval: intOpts, random: rndOpts }[t.mode]}
-            </div>
-            <div class="fx-cell fx-side">
-              <div class="fx-head"><h4>Which side</h4><span class="val pval">${panLabel(t.pan)}</span></div>
-              <div class="side"><input type="range" class="pan" min="-100" max="100" value="${Math.round(t.pan * 100)}" aria-label="Which side ${nameAttr} is on" aria-valuetext="${panLabel(t.pan)}">${SIDE_FIG}</div>
-              <p class="fx-note side-tip">Drag the dot along the arc</p>
-            </div>
-            <div class="fx-cell fx-pic">
-              <h4>Picture</h4>
-              <div class="pic-row"><span class="pthumb" aria-hidden="true"></span>
-                <div class="pic-acts"><div class="row"><button class="ghost sm imgown">${t.img ? 'Change' : 'Choose a picture…'}</button><button class="quiet sm imgdel" ${t.img ? '' : 'hidden'}>Remove</button></div>
-                  <p class="fx-note">Or drag one onto the sound, or paste with Ctrl+V</p></div></div>
-            </div>
+          <div class="fx-cell fx-how">
+            <h4>How it plays</h4>
+            <select class="plays" aria-label="How ${nameAttr} plays">${Object.entries(MODES).map(([m, label]) => `<option value="${m}" ${t.mode === m ? 'selected' : ''}>${label}</option>`).join('')}</select>
+            ${t.mode === 'loop' ? `<label class="check" title="Trims the silence and any fade at each end, and joins the sound where its end is most like its start, so you can’t hear it begin again"><input type="checkbox" class="seam" ${t.seamless ? 'checked' : ''} ${t.buffer ? '' : 'disabled'}> Loop seamlessly</label>` : ''}
+            ${{ loop: loopOpts, interval: intOpts, random: rndOpts }[t.mode]}
           </div>
-          <div class="fx-eff">
-            <div class="fx-row fx-where">
-              <h4 id="${did}-where">Where it is</h4>
-              <select class="where" aria-labelledby="${did}-where">${where && !t.ownMix ? '' : `<option value="" ${where ? '' : 'selected'}>${OWN_MIX}</option>`}${PLACES.map(([id, label]) => `<option value="${id}" ${where === id ? 'selected' : ''}>${esc(label)}</option>`).join('')}</select>
-              <p class="fx-note">A ready-made place sets the effects below for you. Change any of them and the place becomes your own.</p>
-            </div>${FILTERS.map(fxRow).join('')}
+          <div class="fx-cell fx-place">
+            <h4 id="${did}-pos">Where it is</h4>
+            <div class="pad" tabindex="0" role="slider" aria-labelledby="${did}-pos" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(Math.min(1, Math.hypot(t.pos.x, t.pos.y)) * 100)}" aria-valuetext="${posLabel(t)}" aria-describedby="${did}-tip">${PAD_FIG}</div>
+            <div class="seg fill hgt" role="radiogroup" aria-label="Height of ${nameAttr}"><span class="seg-pill" aria-hidden="true"></span>${HEIGHTS.map(([v, w]) =>
+              `<button type="button" role="radio" aria-checked="${v === (t.height || 0)}" tabindex="${v === (t.height || 0) ? 0 : -1}" data-v="${v}"${v === (t.height || 0) ? ' class="on"' : ''}>${w}</button>`).join('')}</div>
+            <p class="pos-say">${posLabel(t)}</p>
+            <p class="fx-note" id="${did}-tip">Drag the dot around the listener. Best heard with headphones.</p>
+          </div>
+          <div class="fx-eff">${FILTERS.map(fxRow).join('')}
+            <div class="fx-row fx-pic">
+              <span class="fx-name">Picture</span>
+              <div class="pic-row"><span class="pthumb" aria-hidden="true"></span><button class="ghost sm imgown">${t.img ? 'Change' : 'Choose a picture…'}</button><button class="quiet sm imgdel" ${t.img ? '' : 'hidden'}>Remove</button></div>
+              <p class="fx-hint">Or drag one onto the sound, or paste with Ctrl+V</p>
+            </div>
           </div>
         </div>
         <div class="dfoot">
@@ -248,36 +284,11 @@ function renderTrack(t) {
   q('.only').onclick = e => { t.solo = !t.solo; e.currentTarget.setAttribute('aria-checked', t.solo); refreshGains(); markDirty(); };
   q('.keep').onclick = () => savePreset(t);
   q('.opener').onclick = () => setDrawer(t, !t.fxOpen);
-  /* Where it is: a ready-made place moves the effect sliders. The settings made by hand are not lost:
-     they are remembered on the sound, stay in the list as "As you set it", and the change can be undone. */
-  q('.where').onchange = e => {
-    const id = e.target.value;
-    const before = { fx: { ...t.fx }, revType: t.revType, echoType: t.echoType, ownMix: t.ownMix || null };
-    if (!id) {
-      if (!t.ownMix) return;
-      Object.assign(t.fx, t.ownMix.fx); t.revType = t.ownMix.revType; t.echoType = t.ownMix.echoType; t.ownMix = null;
-    } else {
-      if (!placeOf(t) && fxCount(t)) t.ownMix = { fx: { ...t.fx }, revType: t.revType, echoType: t.echoType };
-      const p = PLACES.find(x => x[0] === id)[2];
-      FILTER_KEYS.forEach(k => t.fx[k] = p.fx[k]);
-      if (p.revType) t.revType = p.revType;
-      if (p.echoType) t.echoType = p.echoType;
-    }
-    setReverbType(t); applyFx(t);
-    replaceEl(t); markDirty();
-    const sel = t.el.querySelector('.where'); if (sel) sel.focus();
-    const label = id ? PLACES.find(x => x[0] === id)[1] : OWN_MIX;
-    toast(`${t.name}: ${label}`, { action: 'Undo', onAction: () => {
-      if (!cur || !cur.tracks.includes(t)) return;
-      Object.assign(t.fx, before.fx); t.revType = before.revType; t.echoType = before.echoType; t.ownMix = before.ownMix;
-      setReverbType(t); applyFx(t); replaceEl(t); markDirty();
-    } });
-  };
   q('.plays').onchange = e => {
     t.mode = e.target.value;
     if (t.mode === 'loop' && t.seamless && !t.loopBuf && t.buffer) t.loopBuf = makeSeamless(t.buffer, t.fade);
     if (playing) resetTrack(t, ctx.currentTime + 0.05);
-    retest(t);
+    applyFx(t); retest(t);
     replaceEl(t); markDirty();
     t.el.querySelector('.plays').focus();
   };
@@ -286,13 +297,22 @@ function renderTrack(t) {
     if (t.pv) t.pv.g.gain.setTargetAtTime(t.volume, ctx.currentTime, 0.05);
     refreshGains(); markDirty();
   };
-  q('.pan').oninput = e => {
-    t.pan = e.target.value / 100; e.target.setAttribute('aria-valuetext', panLabel(t.pan)); q('.pval').textContent = panLabel(t.pan);
-    t.nodes.pan.pan.setTargetAtTime(t.pan, ctx.currentTime, 0.03); paintSide(t, el); markDirty();
+  q('.revtype').onchange = e => { t.revType = e.target.value; setReverbType(t); markDirty(); };
+  const rowOn = (k, on) => q(`.fx-row[data-fx="${k}"]`).classList.toggle('is-on', on);
+  q('.echo').oninput = e => {
+    t.fx.echo = +e.target.value; const w = fxWord(t.fx.echo);
+    e.target.setAttribute('aria-valuetext', w); q('.ev').textContent = w; rowOn('echo', t.fx.echo > 0);
+    applyFx(t); setOpener(t); markDirty();
   };
-  q('.revtype').onchange = e => { t.revType = e.target.value; setReverbType(t); handMade(t); markDirty(); };
-  q('.echotype').onchange = e => { t.echoType = e.target.value; applyFx(t); handMade(t); markDirty(); };
-  if (q('.trajdir')) q('.trajdir').onchange = e => { t.trajRand = e.target.value === 'rand'; if (!t.trajRand) t.trajDir = e.target.value; markDirty(); };
+  /* how it moves: one choice sets the two amounts behind it. A sound heard on its own starts again, so the new way
+     of moving is heard at once */
+  q('.moves').onchange = e => {
+    const m = e.target.value, pass = !(m in WANDER) && m !== 'still';
+    t.fx.movement = WANDER[m] || 0; t.fx.trajectory = pass ? 100 : 0;
+    if (pass) { t.trajRand = m === 'rand'; if (!t.trajRand) t.trajDir = m; }
+    rowOn('movement', m !== 'still'); q('.fx-row[data-fx="movement"] .fx-hint').textContent = moveSay(t);
+    applyFx(t); paintPad(t, el); retest(t); setOpener(t); markDirty();
+  };
   /* an amount is chosen like a word in a list: a click, or the arrow keys once it has the focus */
   el.querySelectorAll('.fx-amt').forEach(seg => {
     const k = seg.dataset.k, bs = [...seg.querySelectorAll('button')];
@@ -302,7 +322,7 @@ function renderTrack(t) {
       seg.closest('.fx-row').classList.toggle('is-on', t.fx[k] > 0);
       placePill(seg, true);
       if (focus) b.focus();
-      handMade(t); applyFx(t); markDirty();
+      applyFx(t); setOpener(t); markDirty();
     };
     bs.forEach(b => b.onclick = () => { if (!b.classList.contains('on')) choose(b); });
     seg.onkeydown = e => {
@@ -312,27 +332,51 @@ function renderTrack(t) {
     };
     watchSeg(seg);
   });
-  /* the drawing answers to the pointer too: press or drag along it and the sound goes there */
-  const fig = q('.side-fig');
-  const figTo = e => {
-    const r = fig.getBoundingClientRect(), pan = q('.pan');
-    const x = (e.clientX - r.left) / r.width * 200 - 100, y = 96 - (e.clientY - r.top) / r.height * 112;
-    pan.value = Math.round(Math.max(-1, Math.min(1, Math.atan2(x, Math.max(y, 0)) / (Math.PI / 2))) * 100);
-    pan.dispatchEvent(new Event('input', { bubbles: true }));
+  /* where it is: press or drag on the grid and the sound goes there; the arrow keys move it a step, Home (or a
+     double click) puts it back all around you. Right on the listener it is all around, so the dot catches there. */
+  const pad = q('.pad');
+  const moveTo = (x, y) => {
+    x = Math.max(-1, Math.min(1, x)); y = Math.max(-1, Math.min(1, y));
+    if (Math.hypot(x, y) < 0.08) x = y = 0;
+    t.pos = { x: r2(x), y: r2(y) };
+    pad.setAttribute('aria-valuenow', Math.round(Math.min(1, Math.hypot(x, y)) * 100));
+    applyFx(t); paintPad(t, el); markDirty();
   };
-  // the press belongs to the drawing alone: no text selection, no browser drag of it as an image.
-  // The hidden slider takes the focus, so the arrow keys carry on from where the pointer left the dot.
-  fig.onpointerdown = e => {
+  const padTo = e => { const r = pad.getBoundingClientRect(); moveTo(((e.clientX - r.left) / r.width * PAD - PAD_C) / PAD_R, (PAD_C - (e.clientY - r.top) / r.height * PAD) / PAD_R); };
+  // the press belongs to the grid alone: no text selection, no browser drag of the drawing as an image
+  pad.onpointerdown = e => {
     if (e.button !== 0) return;
-    e.preventDefault(); q('.pan').focus({ preventScroll: true });
-    fig.setPointerCapture(e.pointerId); fig.classList.add('held'); figTo(e);
+    e.preventDefault(); pad.focus({ preventScroll: true });
+    pad.setPointerCapture(e.pointerId); pad.classList.add('held'); padTo(e);
   };
-  fig.onpointermove = e => { if (fig.hasPointerCapture(e.pointerId)) figTo(e); };
-  fig.onlostpointercapture = () => fig.classList.remove('held');
-  fig.ondragstart = e => e.preventDefault();
+  pad.onpointermove = e => { if (pad.hasPointerCapture(e.pointerId)) padTo(e); };
+  pad.onlostpointercapture = () => pad.classList.remove('held');
+  pad.ondragstart = e => e.preventDefault();
+  pad.ondblclick = () => moveTo(0, 0);
+  pad.onkeydown = e => {
+    if (e.key === 'Home') { e.preventDefault(); moveTo(0, 0); return; }
+    const d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] }[e.key]; if (!d) return;
+    e.preventDefault();
+    // a step out of the middle clears the catch around the listener
+    const k = e.shiftKey ? 0.25 : 0.05, x = t.pos.x + d[0] * k, y = t.pos.y + d[1] * k, at0 = !t.pos.x && !t.pos.y;
+    moveTo(at0 ? d[0] * Math.max(k, 0.1) : x, at0 ? d[1] * Math.max(k, 0.1) : y);
+  };
+  const hgt = q('.hgt'), hs = [...hgt.querySelectorAll('button')];
+  const setHeight = (b, focus) => {
+    hs.forEach(x => { const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-checked', on); x.tabIndex = on ? 0 : -1; });
+    t.height = +b.dataset.v; placePill(hgt, true); if (focus) b.focus();
+    applyFx(t); paintPad(t, el); markDirty();
+  };
+  hs.forEach(b => b.onclick = () => { if (!b.classList.contains('on')) setHeight(b); });
+  hgt.onkeydown = e => {
+    const step = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1 }[e.key]; if (!step) return;
+    e.preventDefault();
+    const to = hs[hs.indexOf(hgt.querySelector('button.on')) + step]; if (to) setHeight(to, true);
+  };
+  watchSeg(hgt);
   if (q('.seam')) q('.seam').onchange = e => {
     t.seamless = e.target.checked;
-    setTimeout(() => { applySeamless(t); replaceEl(t); markDirty(); }, 20);
+    setTimeout(() => { applySeamless(t); applyFx(t); replaceEl(t); markDirty(); }, 20);
   };
   if (t.mode === 'loop') {
     if (q('.cf')) q('.cf').onchange = e => { t.crossfade = e.target.checked; q('.fade').disabled = !t.crossfade; markDirty(); };
@@ -362,23 +406,8 @@ function renderTrack(t) {
 function finishRow(t, el) {
   if (effectiveGain(t) === 0) el.classList.add('off');
   t.imgReady = paintTrackImage(t, el);   // opening a composition waits for it, so no picture pops in later
-  paintRanges(el); paintSide(t, el);
+  paintRanges(el); paintPad(t, el);
   return el;
-}
-/* A slider moved by hand: these settings are now the writer's own, and the remembered ones give way to them.
-   The "where it is" choice follows: a place when the sliders match one, "As you set it" when not. */
-function handMade(t) {
-  t.ownMix = null;
-  syncWhere(t); setOpener(t);
-}
-function syncWhere(t) {
-  const sel = t.el && t.el.querySelector('.where');
-  if (!sel) return;
-  const w = placeOf(t);
-  let own = sel.querySelector('option[value=""]');
-  if ((!w || t.ownMix) && !own) { own = document.createElement('option'); own.value = ''; own.textContent = OWN_MIX; sel.prepend(own); }
-  if (w && !t.ownMix && own) own.remove();
-  sel.value = w || '';
 }
 function setOpener(t) {
   const s = t.el && t.el.querySelector('.sub .how'); if (!s) return;

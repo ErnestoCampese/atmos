@@ -257,12 +257,11 @@ const confirmDlg = (title, body, okLabel, o) => dialog(Object.assign({
   title, body: body ? `<p>${body}</p>` : '',
   actions: [{ label: 'Cancel', kind: 'quiet', value: null }, { label: okLabel, kind: 'danger fill', value: true }]
 }, o || {})).then(v => v === true);
-/* sliders: the filled part shows the value; "position" fills outwards from the centre */
+/* sliders: the filled part shows the value */
 function paintRange(el) {
   const min = +el.min || 0, max = el.max === '' ? 100 : +el.max, p = max > min ? (el.value - min) / (max - min) * 100 : 0;
-  const center = el.classList.contains('pan');
-  el.style.setProperty('--a', (center ? Math.min(50, p) : 0) + '%');
-  el.style.setProperty('--b', (center ? Math.max(50, p) : p) + '%');
+  el.style.setProperty('--a', '0%');
+  el.style.setProperty('--b', p + '%');
 }
 const paintRanges = (el = document) => el.querySelectorAll('input[type=range]').forEach(paintRange);
 document.addEventListener('input', e => { if (e.target.type === 'range') paintRange(e.target); }, true);

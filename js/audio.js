@@ -41,48 +41,24 @@ function effectiveGain(t) {
   if (t.muted || (anySolo && !t.solo)) return 0;
   return t.volume;
 }
-/* ---------- filters ---------- */
+/* ---------- effects ---------- */
+/* The lines of the table. "How it moves" holds two saved amounts: `movement` (it wanders around its place, all the
+   time) and `trajectory` (it passes by, each time it plays); only one of them is ever at work. */
 const FILTERS = [
-  ['reverb', 'Space', 'The sound fills a space and lingers after it stops, as in a hall or a cave'],
-  ['echo', 'Echo', 'Repeats that bounce left and right and slowly die away'],
-  ['muffled', 'Muffled', 'Takes the brightness away: far off, behind a window, under water'],
-  ['thin', 'Thin', 'Takes the weight away: lighter, airier, further from you'],
-  ['waves', 'Rise and fall', 'Slowly louder and softer on its own, like breathing'],
-  ['movement', 'Movement', 'Drifts slowly from side to side, all the time'],
-  ['trajectory', 'Passing by', 'Each time it plays, it moves across like something passing; the slider sets how far']
+  ['reverb', 'Space'],
+  ['echo', 'Echo'],
+  ['muffled', 'Heard through'],
+  ['thin', 'Played on'],
+  ['waves', 'Rise and fall'],
+  ['movement', 'How it moves']
 ];
 /* Words instead of percentages: you do not have to know what 42% of a reverb sounds like. */
 const fxWord = v => v === 0 ? 'Off' : v < 34 ? 'A little' : v < 67 ? 'Medium' : 'Strong';
-/* Ready-made places. Each one simply sets the sliders below, so nothing new happens to the sound —
-   it is the same seven effects, chosen for you. */
-const noFx = () => ({ reverb: 0, echo: 0, muffled: 0, thin: 0, waves: 0, movement: 0, trajectory: 0 });
-const place = (fx, revType, echoType) => ({ fx: Object.assign(noFx(), fx), revType: revType || 'cathedral', echoType: echoType || 'valley' });
-/* The first is not a place but the way back: every effect off, the reverb and echo types left as they are. */
-const PLACES = [
-  ['none', 'No effects', { fx: noFx() }],
-  ['near', 'A step away', place({ reverb: 22, muffled: 12 }, 'room')],
-  // distance and height are told by tone, as the ear tells them: far is duller, lighter and more in the air than
-  // near; what is above has lost its weight; what is below has lost its brightness and rings in the space under you
-  ['far', 'Far away', place({ muffled: 44, thin: 40, reverb: 46 }, 'hall')],
-  ['above', 'High above', place({ thin: 58, reverb: 26 }, 'hall')],
-  ['below', 'Down below', place({ muffled: 58, reverb: 38 }, 'hall')],
-  ['window', 'Behind a window', place({ muffled: 66, reverb: 20, thin: 12 }, 'room')],
-  ['hall', 'In a big room', place({ reverb: 48 }, 'hall')],
-  ['cathedral', 'In a cathedral', place({ reverb: 76 }, 'cathedral')],
-  ['cave', 'In a cave', place({ reverb: 60, muffled: 26, echo: 16 }, 'cave', 'near')],
-  ['valley', 'Across a valley', place({ echo: 46, reverb: 34, muffled: 38 }, 'hall', 'valley')],
-  ['water', 'Under water', place({ muffled: 86, waves: 28, reverb: 24 }, 'cave')],
-  ['around', 'Drifting around you', place({ movement: 56, waves: 24, reverb: 20 }, 'hall')]
-];
-const placeOf = t => {
-  const hit = PLACES.find(([, , p]) =>
-    FILTER_KEYS.every(k => (t.fx[k] || 0) === p.fx[k]) && (!p.fx.reverb || t.revType === p.revType) && (!p.fx.echo || t.echoType === p.echoType));
-  return hit ? hit[0] : null;
-};
 /* Reverb spaces. rt = seconds for the tail to die away completely,
    pre = delay before the tail, dark = how much sooner the highs die away (rock walls),
    er = close early reflections (nearby walls). */
-const ECHOES = { near: { label: 'Near', time: 0.18 }, valley: { label: 'Valley', time: 0.42 }, mountain: { label: 'Mountain', time: 0.85 } };
+// the three kinds of echo are no longer offered: every echo comes back after the same time. The names stay, for the files that carry them
+const ECHOES = { near: 1, valley: 1, mountain: 1 }, ECHO_TIME = 0.42;
 const SPACES = {
   room:      { label: 'Room',      rt: 1.2, pre: 0.008, dark: 0.45, er: 6 },
   hall:      { label: 'Hall',      rt: 2.6, pre: 0.025, dark: 0.35, er: 4 },
@@ -146,10 +122,53 @@ function cutTails(t, silent) {
   try { n.revSend.disconnect(n.conv); n.dlSend.disconnect(n.dL); } catch (e) {}
   const drop = () => { try { old.tail.disconnect(); old.conv.disconnect(); old.fbL.disconnect(); old.fbR.disconnect(); } catch (e) {} };
   if (silent) drop(); else { old.tail.gain.setTargetAtTime(0, ctx.currentTime, 0.012); setTimeout(drop, 150); }
-  n.tail = ctx.createGain(); n.tail.connect(n.pan);
+  n.tail = ctx.createGain(); n.tail.connect(n.out);
   n.conv = null; setReverbType(t);
   wireEcho(n, ctx); applyFx(t, n, ctx, true);
 }
+/* ---------- where a sound is ----------
+   A sound is placed around the listener's head: to the left or right, ahead or behind, near or far, above or below.
+   It is done the way the ear does it (the browser's binaural panner, "HRTF"): each ear gets the sound a little later,
+   quieter and duller than the other, as a head in the way would make it. It needs headphones to be heard fully.
+   To that are added what tells distance and height: a far sound is quieter, duller, and more of its space than of
+   itself; a sound above is brighter, one below is darker.
+   In the middle of the grid a sound is not a point at all: it is "all around you", the recording as it is, in stereo.
+   The measures behind these numbers: .dev/hrtf-probe.js */
+const FIELD = 10;        // metres from the listener to the edge of the grid
+const NEAR = 3;          // nearer than this, a sound is no louder: the first third of the grid is "close"
+const CLOSE = 1.5;       // and nothing comes nearer than this to the middle of the head
+const ROLLOFF = 0.93;    // the edge of the grid is 10 dB quieter than close by, its corners 13
+const HRTF_GAIN = 2;     // the binaural panner comes out about 5 dB quieter than the sound that went in, more for a wide recording
+const ELEV = 55 * Math.PI / 180;
+const LAP = 0.05;        // a sound that wanders goes and comes back in 20 seconds
+const distGain = d => NEAR / (NEAR + ROLLOFF * (Math.max(d, NEAR) - NEAR));
+/* "Passing by" moves the sound across each time it plays. A seamless loop never plays again, so there is nothing
+   to pass: the effect is left out of it, its amount kept for when the loop is no longer seamless. */
+const noPassing = t => t.mode === 'loop' && t.seamless;
+const passing = t => (t.fx.trajectory || 0) > 0 && !noPassing(t);
+const wandering = t => passing(t) ? 0 : (t.fx.movement || 0);
+const fxCount = t => ['reverb', 'echo', 'muffled', 'thin', 'waves'].filter(k => t.fx[k] > 0).length + (passing(t) || wandering(t) ? 1 : 0);
+/* where the sound is, in metres around the head: x to the right, y up, z behind (the browser's own axes).
+   `s` is how much of a point it is: 0 all around you, 1 a point in a place. */
+function placeOf(t) {
+  let x = t.pos.x, y = t.pos.y, r = Math.hypot(x, y);
+  const h = t.height || 0, wander = wandering(t);
+  // a sound that wanders has to be somewhere to wander from: left on the listener, it starts three metres ahead
+  if (wander && r < 0.3) { if (r < 0.01) { x = 0; y = 0.3; } else { x *= 0.3 / r; y *= 0.3 / r; } r = 0.3; }
+  const u = Math.min(1, r / 0.2), s = passing(t) ? 0 : h || wander ? 1 : u * u * (3 - 2 * u);
+  const d = Math.max(CLOSE, r * FIELD), over = r < 0.05, el = over ? h * Math.PI / 2 : h * ELEV;
+  const th = over ? 0 : Math.atan2(x, y), rh = d * Math.cos(el);
+  return { s, d, th, rh, x: rh * Math.sin(th), y: d * Math.sin(el), z: -rh * Math.cos(th) };
+}
+const binaural = context => {
+  const p = context.createPanner();
+  p.panningModel = 'HRTF'; p.distanceModel = 'inverse'; p.refDistance = NEAR; p.rolloffFactor = ROLLOFF;
+  return p;
+};
+// the ear's data is read the first time a binaural panner is made: have it ready before the first sound needs it
+binaural(ctx);
+// one channel out of two, as a point in space has: left and right are mixed before the sound is placed
+const toPoint = (context, level) => { const g = context.createGain(); g.channelCount = 1; g.channelCountMode = 'explicit'; g.gain.value = level; return g; };
 function buildChain(t, context, dest) {
   const n = {};
   n.gain = context.createGain(); n.gain.gain.value = effectiveGain(t);
@@ -159,53 +178,97 @@ function buildChain(t, context, dest) {
   n.dry = context.createGain();
   n.revSend = context.createGain();
   n.dlSend = context.createGain();
-  n.pan = context.createStereoPanner(); n.pan.pan.value = t.pan;
-  // what rings on after the sound (its space and its echo) leaves through one gate, so it can be cut short
-  n.tail = context.createGain(); n.tail.connect(n.pan);
+  n.out = context.createGain();
+  // what rings on after the sound (its space and its echo) leaves through one gate, so it can be cut short.
+  // It is not placed: a space is all around, and that is what makes the placed sound seem to be out there in it
+  n.tail = context.createGain(); n.tail.connect(n.out);
   n.gain.connect(n.lp); n.lp.connect(n.hp); n.hp.connect(n.trem);
-  n.trem.connect(n.dry); n.dry.connect(n.pan);
+  n.trem.connect(n.dry);
+  // the sound itself goes two ways, mixed by where it is: as it is (all around you), and as a point in a place
+  n.wide = context.createGain(); n.dry.connect(n.wide); n.wide.connect(n.out);
+  n.point = toPoint(context, 0);
+  n.air = context.createBiquadFilter(); n.air.type = 'lowpass'; n.air.Q.value = 0.5;
+  n.elev = context.createBiquadFilter(); n.elev.type = 'highshelf'; n.elev.frequency.value = 7000;
+  n.panner = binaural(context);
+  n.point.connect(n.air); n.air.connect(n.elev); n.elev.connect(n.panner); n.panner.connect(n.out);
   n.trem.connect(n.revSend); setReverbType(t, n, context);
   n.trem.connect(n.dlSend); wireEcho(n, context);
-  n.pan.connect(dest);
-  // slow oscillators for "Waves" (volume) and "Movement" (stereo)
+  n.out.connect(dest);
+  // a slow oscillator for "Rise and fall" (volume)
   n.tremLfo = context.createOscillator(); n.tremLfo.frequency.value = 0.11; n.tremDepth = context.createGain();
   n.tremLfo.connect(n.tremDepth); n.tremDepth.connect(n.trem.gain); n.tremLfo.start();
-  n.panLfo = context.createOscillator(); n.panLfo.frequency.value = 0.06; n.panDepth = context.createGain();
-  n.panLfo.connect(n.panDepth); n.panDepth.connect(n.pan.pan); n.panLfo.start();
   n.fxIn = n.lp;
   applyFx(t, n, context, true);
   return n;
 }
+/* A sound that wanders turns around the listener, at the distance it was put: a little or widely to either side of
+   its place, or all the way round. The place is an angle; two slow waves give its sine and cosine, which four gains
+   turn into the left-right and ahead-behind of the panner. Built only for a sound that wanders. */
+const SWAY = { little: 30 * Math.PI / 180, wide: 80 * Math.PI / 180 };
+function wanderRig(n, context) {
+  if (n.mv) return n.mv;
+  const m = { src: {}, on: null }, g = () => { const x = context.createGain(); x.gain.value = 0; return x; };
+  m.sin = context.createOscillator(); m.sin.frequency.value = LAP;
+  m.cos = context.createOscillator(); m.cos.frequency.value = LAP;
+  m.cos.setPeriodicWave(context.createPeriodicWave(new Float32Array([0, 1]), new Float32Array([0, 0])));
+  // all the way round: the angle keeps growing, so its sine and cosine are the two waves themselves
+  m.src.round = [m.sin, m.cos];
+  // to either side: the angle swings, and its sine and cosine are read off a curve
+  for (const [k, a] of Object.entries(SWAY)) {
+    const S = context.createWaveShaper(), C = context.createWaveShaper(), N = 257, cs = new Float32Array(N), cc = new Float32Array(N);
+    for (let i = 0; i < N; i++) { const v = a * (i / (N - 1) * 2 - 1); cs[i] = Math.sin(v); cc[i] = Math.cos(v); }
+    S.curve = cs; C.curve = cc; m.sin.connect(S); m.sin.connect(C);
+    m.src[k] = [S, C];
+  }
+  m.busS = context.createGain(); m.busC = context.createGain();
+  m.xS = g(); m.xC = g(); m.zS = g(); m.zC = g();
+  m.busS.connect(m.xS); m.busS.connect(m.zS); m.busC.connect(m.xC); m.busC.connect(m.zC);
+  m.xS.connect(n.panner.positionX); m.xC.connect(n.panner.positionX);
+  m.zS.connect(n.panner.positionZ); m.zC.connect(n.panner.positionZ);
+  m.sin.start(); m.cos.start();
+  return n.mv = m;
+}
+const wanderKind = v => !v ? null : v < 34 ? 'little' : v < 67 ? 'wide' : 'round';
 function applyFx(t, n = t.nodes, context = ctx, now) {
   const f = k => (t.fx[k] || 0) / 100;
   const set = (param, v) => { if (now) param.value = v; else param.setTargetAtTime(v, context.currentTime, 0.08); };
-  set(n.lp.frequency, 20000 * Math.pow(250 / 20000, f('muffled')));
+  // where it is
+  const p = placeOf(t), kind = wanderKind(wandering(t));
+  if (p.s > 0 && !n.placed) { n.dry.connect(n.point); n.placed = true; }
+  set(n.wide.gain, Math.cos(p.s * Math.PI / 2));
+  set(n.point.gain, Math.sin(p.s * Math.PI / 2) * HRTF_GAIN);
+  set(n.air.frequency, 20000 * Math.pow(4500 / 20000, Math.max(0, Math.min(1, (p.d - NEAR) / (FIELD * 1.41 - NEAR)))));
+  set(n.elev.gain, (t.height || 0) > 0 ? 5 : (t.height || 0) < 0 ? -8 : 0);
+  set(n.panner.positionY, p.y);
+  if (kind || n.mv) {
+    const m = wanderRig(n, context);
+    if (m.on !== kind) {
+      if (m.on) { try { m.src[m.on][0].disconnect(m.busS); m.src[m.on][1].disconnect(m.busC); } catch (e) {} }
+      if (kind) { m.src[kind][0].connect(m.busS); m.src[kind][1].connect(m.busC); }
+      m.on = kind;
+    }
+    const a = kind ? p.rh : 0;
+    set(m.xS.gain, a * Math.cos(p.th)); set(m.xC.gain, a * Math.sin(p.th));
+    set(m.zS.gain, a * Math.sin(p.th)); set(m.zC.gain, -a * Math.cos(p.th));
+  }
+  set(n.panner.positionX, kind ? 0 : p.x); set(n.panner.positionZ, kind ? 0 : p.z);
+  // the further a sound is, the more of what reaches you is its space and its echo
+  const wet = passing(t) ? 0.8 : 1 - p.s + p.s * Math.sqrt(distGain(p.d));
+  // "Played on" a small speaker loses its weight, and some of its brightness with it; "Heard through" loses the brightness
+  set(n.lp.frequency, Math.min(20000 * Math.pow(250 / 20000, f('muffled')), 20000 * Math.pow(3400 / 20000, f('thin'))));
   set(n.hp.frequency, 20 * Math.pow(1500 / 20, f('thin')));
-  set(n.revSend.gain, f('reverb') * 1.6);
+  set(n.revSend.gain, f('reverb') * 1.6 * wet);
   set(n.dry.gain, 1 - f('reverb') * 0.65);
-  const ed = (ECHOES[t.echoType] || ECHOES.valley).time;
-  set(n.dL.delayTime, ed); set(n.dR.delayTime, ed);
-  set(n.dlSend.gain, f('echo') * 1.3);
+  set(n.dL.delayTime, ECHO_TIME); set(n.dR.delayTime, ECHO_TIME);
+  set(n.dlSend.gain, f('echo') * 1.3 * wet);
   set(n.fbL.gain, 0.45 + f('echo') * 0.25); set(n.fbR.gain, 0.45 + f('echo') * 0.25);
   set(n.trem.gain, 1 - f('waves') * 0.45);
   set(n.tremDepth.gain, f('waves') * 0.45);
-  set(n.panDepth.gain, f('movement') * 0.9);
 }
 function disposeChain(n) {
-  try { n.tremLfo.stop(); n.panLfo.stop(); } catch (e) {}
-  try { n.pan.disconnect(); } catch (e) {}
+  try { n.tremLfo.stop(); if (n.mv) { n.mv.sin.stop(); n.mv.cos.stop(); } } catch (e) {}
+  try { n.out.disconnect(); } catch (e) {}
 }
-function fxValueText(t, k) {
-  const v = t.fx[k] || 0;
-  if (k !== 'trajectory') return fxWord(v);
-  if (!v) return 'Off';
-  const how = v >= 100 ? 'Side to side' : v >= 70 ? 'Wide' : v >= 35 ? 'Halfway' : 'Slight';
-  return how + (t.trajRand ? ', random' : '');
-}
-/* "Passing by" moves the sound across each time it plays. A seamless loop never plays again, so there is nothing
-   to pass: the effect is left out of it, its amount kept for when the loop is no longer seamless. */
-const noPassing = t => t.mode === 'loop' && t.seamless;
-const fxCount = t => Object.entries(t.fx).filter(([k, v]) => v > 0 && !(k === 'trajectory' && noPassing(t))).length;
 function refreshGains() {
   if (!cur) return;
   cur.tracks.forEach(t => {
@@ -298,32 +361,37 @@ function applySeamless(t) {
 function retest(t) { if (t.pv) { stopTrackTest(t); trackTest(t); } }
 // remembers when each repeat starts, to draw the progress bar
 function noteHit(t, start, dur, loop) { (t.hits = t.hits || []).push({ start, dur, loop }); if (t.hits.length > 4) t.hits.shift(); }
-/* Trajectory: on every repeat the sound travels across the stereo space */
+/* Passing by: on every repeat the sound travels past the listener, from far on one side to far on the other, along a
+   line through the place it was given (ahead or behind, near or far, above or below). It swells as it comes and
+   fades as it goes, as anything passing does. */
 const TRAJ = { lr: 'Left to right', rl: 'Right to left', pp: 'Back and forth' };
 function trajectory(t) {
-  const w = (t.fx.trajectory || 0) / 100;
-  if (!w) return null;
+  if (!passing(t)) return null;
   let dir = t.trajDir, k = 1;
   if (t.trajRand) { dir = Math.random() < 0.5 ? 'lr' : 'rl'; k = 0.6 + Math.random() * 0.4; }
   else if (dir === 'pp') { t.ppFlip = !t.ppFlip; dir = t.ppFlip ? 'lr' : 'rl'; }
-  return dir === 'lr' ? { from: -w * k, to: w * k } : { from: w * k, to: -w * k };
+  const w = 1.3 * FIELD * k;
+  return dir === 'lr' ? { from: -w, to: w } : { from: w, to: -w };
 }
-// connects the source to its destination, going (if needed) through a pan that moves while the sound plays
+// connects the source to its destination, going (if needed) through a place that moves while the sound plays
 function trajConnect(t, context, node, dest, when, d, loopLen) {
   const tr = trajectory(t);
   if (!tr) { node.connect(dest); return null; }
-  const p = context.createStereoPanner();
+  // never through the head: a line left on the listener passes just ahead
+  const depth = Math.abs(t.pos.y) * FIELD < CLOSE ? (t.pos.y < 0 ? -CLOSE : CLOSE) : t.pos.y * FIELD;
+  const m = toPoint(context, HRTF_GAIN), p = binaural(context);
+  p.positionZ.value = -depth; p.positionY.value = (t.height || 0) * Math.abs(depth) * 0.9;
   if (loopLen) {
-    // a sound listened to on its own repeats without end: it sways gently back and forth, one crossing per lap
+    // a sound listened to on its own repeats without end: it goes back and forth, one crossing per lap
     const osc = context.createOscillator(); osc.type = 'triangle'; osc.frequency.value = 1 / (2 * loopLen);
-    const depth = context.createGain(); depth.gain.value = tr.to;
-    osc.connect(depth); depth.connect(p.pan); osc.start(when);
+    const far = context.createGain(); far.gain.value = tr.to;
+    osc.connect(far); far.connect(p.positionX); osc.start(when);
     p.osc = osc;
   } else {
-    p.pan.setValueAtTime(tr.from, when);
-    p.pan.linearRampToValueAtTime(tr.to, when + d);
+    p.positionX.setValueAtTime(tr.from, when);
+    p.positionX.linearRampToValueAtTime(tr.to, when + d);
   }
-  node.connect(p); p.connect(dest);
+  node.connect(m); m.connect(p); p.connect(dest);
   return p;
 }
 function playOne(t, context, dest, when, sources) {

@@ -8,28 +8,35 @@ const blank = () => ({ file: null, name: '', description: '', cover: null, cover
 const FILTER_KEYS = ['reverb', 'echo', 'muffled', 'thin', 'waves', 'movement', 'trajectory'];
 const MODES = { loop: 'Continuous', interval: 'At intervals', random: 'At random' };
 const defaults = (file, name) => ({ uid: uid(), file, name: name || niceName(file),
-  volume: 0.7, pan: 0, mode: 'loop', crossfade: true, fade: 3, every: 10, count: 3, per: 60, varyPitch: false, varyVol: false, hitFade: 0,
+  volume: 0.7, mode: 'loop', crossfade: true, fade: 3, every: 10, count: 3, per: 60, varyPitch: false, varyVol: false, hitFade: 0,
   fx: { reverb: 0, echo: 0, muffled: 0, thin: 0, waves: 0, movement: 0, trajectory: 0 }, revType: 'cathedral', echoType: 'valley', trajDir: 'lr', trajRand: false,
-  muted: false, solo: false, seamless: false, loopBuf: null, buffer: null, missing: false, img: null, ownMix: null });
+  muted: false, solo: false, seamless: false, loopBuf: null, buffer: null, missing: false, img: null, ownMix: null,
+  pos: { x: 0, y: 0 }, height: 0 });
 // only images you chose yourself (a file in the folder, or a pasted link)
 const cleanImg = i => !i || typeof i !== 'object' || i.id ? null : typeof i.local === 'string' && i.local ? { local: i.local }
   : typeof i.url === 'string' && /^https?:\/\/\S+$/i.test(i.url) ? { url: i.url } : null;
 const cleanFx = f => Object.fromEntries(FILTER_KEYS.map(k => [k, Math.round(num((f || {})[k], 0, 0, 100))]));
-const toJson = t => ({ file: t.file, name: t.name, volume: r2(t.volume), pan: r2(t.pan), mode: t.mode, crossfade: t.crossfade, crossfadeSeconds: t.fade,
+/* Where a sound is: x to the right and y ahead of the listener, each from -1 to 1 (the middle is "all around you"),
+   and its height (-1 below, 0 level, 1 above). `pan` is still written, as the left-right part of it, for older copies
+   of the app; a file that has only `pan` (every file before November 2026) is placed on that side, close by. */
+const posOf = j => { const p = j.position;
+  return p && typeof p === 'object' ? { pos: { x: num(p.x, 0, -1, 1), y: num(p.y, 0, -1, 1) }, height: Math.sign(num(p.height, 0, -1, 1)) }
+    : { pos: { x: r2(num(j.pan, 0, -1, 1) * 0.3), y: 0 }, height: 0 }; };
+const toJson = t => ({ file: t.file, name: t.name, volume: r2(t.volume), pan: r2(t.pos.x), position: { x: r2(t.pos.x), y: r2(t.pos.y), height: t.height }, mode: t.mode, crossfade: t.crossfade, crossfadeSeconds: t.fade,
   everySeconds: t.every, times: t.count, periodSeconds: t.per, varyPitch: t.varyPitch, varyVolume: t.varyVol, hitFade: t.hitFade, filters: { ...t.fx },
   reverbType: t.revType, echoType: t.echoType, trajectoryDirection: t.trajDir, trajectoryRandom: t.trajRand, seamlessLoop: t.seamless,
   image: t.img && (t.img.local ? { local: t.img.local } : { url: t.img.url }), muted: t.muted, solo: t.solo,
   ...(t.ownMix ? { ownMix: { filters: { ...t.ownMix.fx }, reverbType: t.ownMix.revType, echoType: t.ownMix.echoType } } : {}) });
 // Saved files can be shared between people, so every value is checked and brought within its limits before use.
 const fromJson = j => Object.assign(defaults(String(j.file), typeof j.name === 'string' ? j.name : ''), {
-  volume: num(j.volume, 0.7, 0, 1), pan: num(j.pan, 0, -1, 1), mode: pick(j.mode, MODES, 'loop'),
+  volume: num(j.volume, 0.7, 0, 1), ...posOf(j), mode: pick(j.mode, MODES, 'loop'),
   crossfade: !!(j.crossfade ?? true), fade: num(j.crossfadeSeconds, 3, 0.5, 10), every: num(j.everySeconds, 10, 0.5, 3600),
   count: Math.round(num(j.times, 3, 1, 600)), per: Math.round(num(j.periodSeconds, 60, 1, 3596400)),
   varyPitch: !!j.varyPitch, varyVol: !!j.varyVolume, hitFade: num(j.hitFade, 0, 0, 5),
   fx: cleanFx(j.filters), revType: pick(j.reverbType, SPACES, 'cathedral'), echoType: pick(j.echoType, ECHOES, 'valley'),
   trajDir: pick(j.trajectoryDirection, TRAJ, 'lr'), trajRand: !!j.trajectoryRandom, seamless: !!j.seamlessLoop,
   img: cleanImg(j.image), muted: !!j.muted, solo: !!j.solo,
-  // optional and new: the effects as set by hand, kept while a ready-made place is chosen
+  // from when a ready-made place could be chosen: the effects as set by hand before it. No longer used, but a file that carries it keeps it
   ownMix: j.ownMix && typeof j.ownMix === 'object' ? { fx: cleanFx(j.ownMix.filters), revType: pick(j.ownMix.reverbType, SPACES, 'cathedral'), echoType: pick(j.ownMix.echoType, ECHOES, 'valley') } : null });
 const validTrack = j => !!j && typeof j === 'object' && typeof j.file === 'string' && !!j.file;
 

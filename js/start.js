@@ -29,13 +29,6 @@ const skipTo = (el, focusSel) => {
 };
 $('skipEx').onclick = () => skipTo($('exPanel'), 'select, button');
 
-/* Double-clicking the position slider puts the sound back in the centre. */
-document.addEventListener('dblclick', e => {
-  const r = e.target.closest('input[type=range].pan');
-  if (!r) return;
-  r.value = 0; paintRange(r); r.dispatchEvent(new Event('input', { bubbles: true }));
-});
-
 /* Keeps a copy of the app's own files so it opens without a connection, and lets it be
    installed like an ordinary program. Only where the browser allows it: never from a page
    opened straight off the disk. */

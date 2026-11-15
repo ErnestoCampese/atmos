@@ -765,9 +765,10 @@ input[type=range]:disabled{cursor:not-allowed;--fill:var(--mute);--rail:var(--ru
 .trow>.warn .ghost:hover{border-color:var(--ember)}
 
 /* ---------- the drawer of one sound ----------
-   Left, a narrow column with what is the sound's own: how it plays, which side it is on, its picture, each at its own
-   size. Right, the effects as a table on three columns: the name, how much (right beside the name), then what it does.
-   "Where it is" is the first line of the same table. An effect that is on lights its whole line.
+   Across the top, how it plays: its height changes with the way of playing, and there it has no neighbour to leave a
+   hole beside. Under it, left, where it is: a grid with the listener in the middle and the sound a dot around them.
+   Right, a table on three columns: the name, the control (right beside the name), then what it does; the effects,
+   and the picture last. An effect that is on lights its whole line.
    It unfolds downwards from its line and the lines below move with it; it folds back a little quicker. */
 .fxp{position:relative;z-index:3;display:grid;grid-template-rows:0fr;visibility:hidden;
   transition:grid-template-rows var(--t-leave) var(--ease),visibility 0s linear var(--t-leave)}
@@ -779,51 +780,48 @@ input[type=range]:disabled{cursor:not-allowed;--fill:var(--mute);--rail:var(--ru
 .track.is-open .fx-body,.track.is-open .dfoot{opacity:1;transition:opacity var(--t-panel) var(--ease) .06s}
 .fxp h4{font:600 13px/20px var(--ui);color:var(--ink);margin:0}
 .fx-body{display:grid;grid-template-columns:288px minmax(0,1fr)}
-.fx-own{display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--rule)}
 .fx-cell{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s2);min-width:0;padding:var(--s4) var(--pad)}
-.fx-cell+.fx-cell{border-top:1px solid var(--rule)}
-.fx-pic{flex:1}
-/* how it plays: the way first, as wide as the column; what goes with it in lines of words under it */
-.fx-how{flex-direction:row;flex-wrap:wrap;align-items:center;gap:var(--s2) var(--s3)}
-.fx-how>h4{flex:0 0 100%}
-.fx-how>select{flex:0 0 100%;width:100%}
+/* how it plays: its name, the way right beside it, then what goes with that way, in one line of words that wraps */
+.fx-how{grid-column:1/-1;flex-direction:row;flex-wrap:wrap;align-items:center;gap:var(--s2) var(--s4);border-bottom:1px solid var(--rule)}
+.fx-how>select{flex:0 0 240px;width:240px}
 .opts{display:flex;align-items:center;gap:var(--s2);font-size:13px;color:var(--ink2);flex-wrap:wrap;min-height:32px;white-space:nowrap}
 .opts input[type=range]{flex:1 1 40px;min-width:40px;max-width:120px}
-.fx-how .opts:has(input[type=range]){flex:1 1 104px;flex-wrap:nowrap}
-.fx-how .opts:has(input[type=number]){flex:0 0 100%;flex-wrap:nowrap}
+.fx-how .opts:has(input[type=range]){flex:0 1 220px;flex-wrap:nowrap}
+.fx-how .opts:has(input[type=number]){flex:0 0 auto;flex-wrap:nowrap}
 /* the two ways a repeat may vary belong together: they move to the next line as one, never one without the other */
 .fx-how .vary{gap:var(--s2) var(--s3);min-width:0}
 .val{color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
-/* which side: the title and the place in words on one line, the listener under it at its own size */
-.fx-head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s3);width:100%}
-.fx-head .val{font-size:13px;font-weight:600}
-.side{position:relative;align-self:center}
-/* the slider is still there for the keyboard and for screen readers; the eye uses the dot */
-.side .pan{position:absolute;inset:0;width:100%;height:100%;opacity:0;pointer-events:none}
-.side-fig{display:block;width:200px;height:112px;overflow:visible;fill:none;stroke:var(--mute);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-user-drag:none}
-.side-fig.held,.side-fig.held .sf-dot{cursor:grabbing}
-.sf-hit{fill:transparent;stroke:none;pointer-events:all}
-.sf-arc{stroke:var(--edge);stroke-dasharray:2 4}
-.sf-lr{fill:var(--mute);stroke:none;font:500 10px var(--ui)}
-.sf-l,.sf-r{stroke:var(--ink2)}
-.sf-dot{cursor:grab}
-.sf-dot circle:first-child{stroke:var(--ink2);fill:var(--card2)}
-.sf-dot circle:last-child{fill:var(--ink);stroke:none}
-.side .pan:focus-visible+.side-fig .sf-dot circle:first-child{stroke:var(--ink);stroke-width:2.5}
-.side-tip{align-self:center}
+/* where it is: the grid at its own size, the height under it as wide as the grid, then the place said in words */
+.fx-place{border-right:1px solid var(--rule)}
+.pad{align-self:center;width:240px;height:240px;border:1px solid var(--edge);border-radius:var(--r-ctl);background:var(--field);overflow:hidden;
+  cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none}
+.pad.held,.pad.held .pf-dot{cursor:grabbing}
+.pad-fig{display:block;width:100%;height:100%;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;-webkit-user-drag:none}
+.pf-grid{stroke:var(--rule);stroke-width:1}
+.pf-axis{stroke:var(--line);stroke-width:1}
+/* the two lines through the middle stop short of the listener and of the four words */
+.pf-w{fill:var(--mute);font:500 12px var(--ui)}
+.pf-you{stroke:var(--mute);stroke-width:2.3px}
+.pf-all{stroke:var(--ink2);stroke-dasharray:2 4;opacity:0;transition:opacity var(--t-state)}
+.pad.is-all .pf-all{opacity:1}
+.pf-move{stroke:var(--ink2);stroke-dasharray:2 4}
+.pf-head{stroke:var(--ink2)}
+.pf-dot{cursor:grab}
+.pf-dot circle:first-child{stroke:var(--ink2);fill:var(--card2)}
+.pf-dot circle:last-child{fill:var(--ink);stroke:none}
+.pad:focus-visible .pf-dot circle:first-child{stroke:var(--ink);stroke-width:2.5}
+.hgt{align-self:center;width:240px;max-width:100%;height:36px}
+.hgt button{padding:0 var(--s1)}
+.pos-say{margin:0;font:600 13px/20px var(--ui);color:var(--ink)}
 /* the picture, small, beside the two words that change it */
-.pic-row{display:flex;align-items:flex-start;gap:var(--s3);width:100%}
-.pthumb{flex:none;width:44px;height:44px;border:1px solid var(--line);border-radius:var(--r-ctl);background:linear-gradient(140deg,#2c3346,#1f2430) center/cover no-repeat}
-.pic-acts{flex:1;display:flex;flex-direction:column;gap:var(--s1);min-width:0}
+.pic-row{display:flex;align-items:center;gap:var(--s2)}
+.pthumb{flex:none;width:36px;height:36px;border:1px solid var(--line);border-radius:var(--r-ctl);background:linear-gradient(140deg,#2c3346,#1f2430) center/cover no-repeat}
 .fx-note{margin:0;font-size:12px;line-height:1.4;color:var(--mute);text-wrap:pretty}
 /* the table of effects: name, how much, what it does. The lines share whatever height the left column needs */
 .fx-eff{display:flex;flex-direction:column;min-width:0}
 .fx-row{flex:1 0 auto;display:grid;grid-template-columns:104px 288px minmax(0,1fr);column-gap:var(--s4);align-items:center;min-height:52px;
   padding:var(--s2) var(--pad);border-top:1px solid var(--rule);transition:background var(--t-state)}
-.fx-where{min-height:72px;border-top:0}
-/* the place is as wide as the amounts under it: one column, two clean edges */
-.fx-where select{width:100%}
-.fx-where .fx-note{color:var(--ink2);max-width:64ch}
+.fx-row:first-child{border-top:0}
 .fx-name{position:relative;font:500 13px/20px var(--ui);color:var(--ink2)}
 .fx-hint{margin:0;font-size:12px;line-height:1.4;color:var(--mute-lit);text-wrap:pretty}
 /* an effect that is on lights its line: a faint plate across it, a mark before its name, the name and its word in ink */
@@ -833,20 +831,20 @@ input[type=range]:disabled{cursor:not-allowed;--fill:var(--mute);--rail:var(--ru
 .fx-row.is-on .fx-hint{color:var(--ink)}
 .fx-amt{width:288px;max-width:100%;height:36px}
 .fx-amt button{padding:0 var(--s1);white-space:nowrap}
-/* the words of "Passing by" are of very different lengths: each takes the room its own length asks for */
-.fx-amt[data-k="trajectory"] button{flex:1 1 auto;padding:0 var(--s2)}
+/* what a sound is heard through or played on are words of very different lengths: each takes the room its own length asks for */
+.fx-amt[data-k="muffled"] button,.fx-amt[data-k="thin"] button{flex:1 1 auto;padding:0 var(--s2)}
+/* the echo is a slider as wide as the amounts, its word after it; how it moves is a menu of the same width */
+.fx-slide{display:flex;align-items:center;gap:var(--s3);height:36px}
+.fx-slide input{flex:1;min-width:0}
+.fx-slide .val{flex:none;min-width:52px;font-size:13px;color:var(--ink2)}
+.fx-row.is-on .fx-slide .val{color:var(--ink);font-weight:600}
+.fx-row>select{width:100%}
 .fx-row:not(.is-on) .fx-amt button.on{color:var(--ink2)}
 .fx-row.is-on .seg-pill{background:var(--ink);box-shadow:none}
 .fx-row.is-on .fx-amt button.on{color:var(--on-ink);font-weight:600}
 /* the choice that belongs to an effect ends its sentence, and is there only while the effect is on */
 .fx-kind{white-space:nowrap}
 .fx-row:not(.is-on) .fx-kind,.fx-row.is-on .fx-rest{display:none}
-/* an effect that cannot apply to the way the sound plays stands aside like any disabled control (no ground, no chosen
-   plate, pencil words) and its sentence says why */
-.fx-row.is-idle .fx-name{color:var(--mute)}
-.fx-row.is-idle .fx-amt{background:transparent}
-.fx-row.is-idle .fx-amt .seg-pill{display:none}
-.fx-row.is-idle .fx-amt button:disabled{color:var(--mute);cursor:not-allowed}
 select.kind{field-sizing:content;height:28px;margin-left:var(--s1);padding:0 var(--s5) 0 var(--s2);font-size:12px;font-weight:500;background-position:right var(--s1) center;vertical-align:middle}
 /* what is done with the sound itself, on the fold at the foot: keep it at one end, take it away at the other */
 .dfoot{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);flex-wrap:wrap;padding:var(--s3) var(--pad);border-top:1px dashed var(--rule)}
@@ -1093,22 +1091,18 @@ input[type=range].imm-vol::-webkit-slider-thumb{box-shadow:0 0 12px rgba(0,0,0,.
 /* the tracklist answers to its own width: half a screen, or a full one with "Your sounds" docked beside it.
    There the drawer is one column: the sound's own settings side by side, the table of effects under them */
 @container tracks (max-width:1099px){
+  /* where it is becomes a line of its own: the grid, and beside it its height and the place in words; the table under it */
   .fx-body{grid-template-columns:minmax(0,1fr)}
-  /* how it plays is a strip across the drawer: its height changes with the way of playing, and there it has no
-     neighbour to leave a hole beside. Which side and the picture share the line under it, the picture as tall as the listener */
-  .fx-own{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-right:0;border-bottom:1px solid var(--rule)}
-  .fx-how{grid-column:1/-1}
-  .fx-how>select{flex:0 0 240px;width:240px}
-  .fx-how .opts:has(input[type=number]){flex:0 0 auto}
-  .fx-how .opts:has(input[type=range]){flex:0 1 220px}
-  .fx-pic{border-left:1px solid var(--rule)}
-  .pic-row{flex:1;align-items:stretch}
-  .pthumb{width:auto;height:auto;min-height:44px;max-height:128px;aspect-ratio:1}
+  .fx-place{display:grid;grid-template-columns:240px minmax(0,1fr);grid-template-rows:auto auto auto 1fr;column-gap:var(--s5);align-items:start;border-right:0;border-bottom:1px solid var(--rule)}
+  .fx-place>h4{grid-column:1/-1}
+  .fx-place>.pad{grid-row:2/-1}
+  .fx-place>.hgt{justify-self:start}
 }
 @container tracks (max-width:912px){
   .tracks>*{--pad:var(--s4);--vol-w:96px}
   .fx-row{grid-template-columns:96px 272px minmax(0,1fr);column-gap:var(--s3)}
   .fx-amt{width:272px}
+  .fx-amt[data-k="muffled"] button{padding:0 var(--s1)}
 }
 /* a narrow list: a sound becomes two lines, who it is, then how loud and what is inside.
    Below 720px a single line leaves the name too little room: its status ("5 effects") would be cut.
@@ -1122,13 +1116,10 @@ input[type=range].imm-vol::-webkit-slider-thumb{box-shadow:0 0 12px rgba(0,0,0,.
 /* narrower still, the settings become one column */
 @container tracks (max-width:608px){
   .tl-head .find{flex:1 1 auto}
-  .fx-own{display:flex;flex-direction:column}
+  .fx-place{display:flex}
   .fx-how>select{flex:0 0 100%;width:100%}
   .fx-how .opts:has(input[type=number]){flex:0 0 100%}
   .fx-how .opts:has(input[type=range]){flex:1 1 104px}
-  .fx-pic{border-left:0}
-  .pic-row{flex:none;align-items:flex-start}
-  .pthumb{width:44px;height:44px;aspect-ratio:auto}
   .fx-row{grid-template-columns:minmax(0,1fr);row-gap:var(--s2);padding-block:var(--s3)}
   .fx-amt{width:100%}
 }
