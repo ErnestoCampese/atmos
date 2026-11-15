@@ -17,6 +17,8 @@ function cleanComp(raw) {
   // "description" is optional too: a file without one has none
   const desc = typeof d.description === 'string' ? d.description.replace(/\s+/g, ' ').trim() : '';
   if (desc) out.description = desc;
+  // optional and new as well: the cover shown, blurred, behind the composition's page
+  if (d.coverAsBackground === true && out.cover) out.coverAsBackground = true;
   return out;
 }
 let brokenComps = [];   // files in the compositions folder that could not be read: shown, never skipped

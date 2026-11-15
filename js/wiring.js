@@ -81,15 +81,16 @@ $('coverBtn').onclick = () => $('coverIn').click();
 $('coverChange').onclick = () => $('coverIn').click();
 $('coverRemove').onclick = () => {
   if (!cur) return;
-  const was = { cover: cur.cover, pending: cur.coverPending, url: cur.coverUrl }, c = cur;
-  cur.cover = null; cur.coverPending = null; cur.coverUrl = null;
+  const was = { cover: cur.cover, pending: cur.coverPending, url: cur.coverUrl, bg: cur.coverBg }, c = cur;
+  cur.cover = null; cur.coverPending = null; cur.coverUrl = null; cur.coverBg = false;
   setCover(null); markDirty();
   toast('Cover removed — the picture file stays in your folder', { action: 'Undo', onAction: () => {
     if (cur !== c) return;
-    cur.cover = was.cover; cur.coverPending = was.pending; cur.coverUrl = was.url;
+    cur.cover = was.cover; cur.coverPending = was.pending; cur.coverUrl = was.url; cur.coverBg = was.bg;
     setCover(cur.coverUrl); markDirty();
   } });
 };
+$('coverBg').onclick = () => { if (!cur || !cur.coverUrl) return; cur.coverBg = !cur.coverBg; setWash(); markDirty(); };
 $('coverIn').onchange = e => {
   const f = e.target.files[0]; e.target.value = '';
   if (!f || !cur) return;

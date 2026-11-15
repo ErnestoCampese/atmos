@@ -43,7 +43,7 @@ watchSeg($('homeTabs')); watchSeg($('libTabs'));
    (which is also the handle that reorders it), its picture (which is also "listen to it alone"), its
    name in the writer's type with a line of status, a silence switch with its volume, and an opener
    that says in words what is inside. Everything else lives in the drawer under the line, opened by
-   clicking anywhere on the line or by the opener. */
+   the opener and by nothing else: a click on the line itself does nothing. */
 /* which side, in words like the effects: nobody has to know what "Left 40" sounds like */
 const panLabel = v => {
   const n = Math.round(Math.abs(v) * 100), side = v < 0 ? 'left' : 'right';
@@ -232,11 +232,6 @@ function renderTrack(t) {
     e.target.value = t.name; ink.textContent = t.name; el.setAttribute('aria-label', t.name);
     setKeepBtn(t); markDirty();
   };
-  // a click anywhere on the line that is not a control opens (or closes) its drawer
-  q('.trow').addEventListener('click', e => {
-    if (t.missing || e.target.closest('button, input, select, label, a, .grip, .warn, .volw')) return;
-    setDrawer(t, !t.fxOpen);
-  });
   wireDrawerAndDrop(t, el);
   if (t.missing) { wireMissing(t, el); return finishRow(t, el); }
   q('.mute').onclick = e => {
@@ -277,6 +272,7 @@ function renderTrack(t) {
     t.mode = e.target.value;
     if (t.mode === 'loop' && t.seamless && !t.loopBuf && t.buffer) t.loopBuf = makeSeamless(t.buffer, t.fade);
     if (playing) resetTrack(t, ctx.currentTime + 0.05);
+    retest(t);
     replaceEl(t); markDirty();
     t.el.querySelector('.plays').focus();
   };
@@ -384,7 +380,7 @@ function setOpener(t) {
   s.textContent = MODES[t.mode];
   t.el.querySelector('.sub .fxn').textContent = fxWords(t);
 }
-/* the drawer under a line: opened by clicking the line or its opener, closed by either again or by Escape inside it */
+/* the drawer under a line: opened by its opener only, closed by the opener again or by Escape inside it */
 function setDrawer(t, open) {
   t.fxOpen = open;
   const el = t.el; if (!el) return;

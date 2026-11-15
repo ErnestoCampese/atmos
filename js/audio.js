@@ -249,7 +249,10 @@ function applySeamless(t) {
   t.loopBuf = t.seamless ? makeSeamless(t.buffer, t.fade) : null;
   if (t.seamless && !t.loopBuf) { t.seamless = false; toast('This sound is too short to hide the join. It needs at least 1.5 seconds without silence.', { kind: 'warn', ms: 5000 }); }
   if (playing && t.st) resetTrack(t, ctx.currentTime + 0.05);
+  retest(t);
 }
+// a sound being listened to on its own starts again, so what is heard is the sound as it has just been set
+function retest(t) { if (t.pv) { stopTrackTest(t); trackTest(t); } }
 // remembers when each repeat starts, to draw the progress bar
 function noteHit(t, start, dur, loop) { (t.hits = t.hits || []).push({ start, dur, loop }); if (t.hits.length > 4) t.hits.shift(); }
 /* Trajectory: on every repeat the sound travels across the stereo space */

@@ -84,6 +84,7 @@ function show(v) {
   $('foot').hidden = v === 'vEditor'; $('sky').dataset.view = v; bootSay.end();
   if (prev !== v) { const el = $(v); el.classList.remove('enter'); void el.offsetWidth; el.classList.add('enter'); if (fade) el.classList.add('after'); }
   window.scrollTo(0, 0);
+  if (typeof setWash === 'function') setWash();
 }
 VIEWS.forEach(id => $(id).addEventListener('animationend', e => { if (e.target.id === id && e.animationName === 'screen-in') e.target.classList.remove('enter'); }));
 function ghostOut(sec) {

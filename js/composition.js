@@ -2,7 +2,7 @@
    the browser's Back button, auto-save and saving. */
 
 /* ---------- a composition ---------- */
-const blank = () => ({ file: null, name: '', description: '', cover: null, coverUrl: null, coverPending: null, volume: 0.8, tracks: [], dirty: false,
+const blank = () => ({ file: null, name: '', description: '', cover: null, coverUrl: null, coverPending: null, coverBg: false, volume: 0.8, tracks: [], dirty: false,
   archived: false, savedAt: 0,
   effect: 'fireflies', background: null, bgUrl: null, bgPending: null, pixel: false, fill: false });
 const FILTER_KEYS = ['reverb', 'echo', 'muffled', 'thin', 'waves', 'movement', 'trajectory'];
@@ -85,7 +85,7 @@ async function openComp(c, noPush) {
 }
 async function prepareComp(op) {
   const c = op.c, from = op.from, d = c.data;
-  cur = Object.assign(blank(), { file: c.file, name: d.name, description: d.description || '', cover: d.cover, coverUrl: c.coverUrl, volume: d.masterVolume,
+  cur = Object.assign(blank(), { file: c.file, name: d.name, description: d.description || '', cover: d.cover, coverUrl: c.coverUrl, coverBg: !!d.coverAsBackground, volume: d.masterVolume,
     archived: !!d.archived, savedAt: c.mod,
     effect: d.immersion.effect, background: d.immersion.background, pixel: d.immersion.pixelArt, fill: d.immersion.fill });
   enterEditor();
@@ -302,6 +302,38 @@ function setCover(url) {
   $('coverPh').hidden = !!url;
   $('coverBtn').classList.toggle('has', !!url);
   $('coverActs').hidden = !url;
+  $('coverBg').hidden = !url;
+  setWash();
+}
+/* The cover, blurred, behind the whole composition: only where the writer asked for it, with the small button
+   on the cover. The picture is dimmed by its own brightest part, so a pale cover is held back more than a
+   dark one and the words set on the night keep their contrast over any picture. */
+const WASH_TOP = 0.05;   // the most light the blurred picture may give off (relative luminance, 0 to 1)
+function washDim(im) {
+  try {
+    const c = document.createElement('canvas'); c.width = c.height = 16;
+    const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(im, 0, 0, 16, 16);
+    const d = g.getImageData(0, 0, 16, 16).data, lin = v => (v /= 255) <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4;
+    let top = 0;
+    for (let i = 0; i < d.length; i += 4) top = Math.max(top, .2126 * lin(d[i]) + .7152 * lin(d[i + 1]) + .0722 * lin(d[i + 2]));
+    return Math.min(1, (WASH_TOP / Math.max(top, 1e-4)) ** (1 / 2.2));
+  } catch (e) { return .2; }
+}
+function setWash() {
+  const w = $('wash'), b = $('coverBg'), on = !!(cur && cur.coverBg);
+  b.setAttribute('aria-pressed', on);
+  b.title = on ? 'Take the cover away from behind the page' : 'Show the cover, blurred, behind the whole page';
+  const want = () => cur && cur.coverBg && !$('vEditor').hidden ? cur.coverUrl : null;
+  const url = want();
+  if (!url) { w.classList.remove('on'); return; }
+  if (w.dataset.url === url) { w.classList.add('on'); return; }
+  // decoded and measured before it is drawn, so it appears whole and already at its own strength
+  const im = new Image(); im.src = url;
+  im.decode().then(() => {
+    if (want() !== url) return;
+    w.dataset.url = url; w.style.setProperty('--dim', washDim(im).toFixed(3)); w.style.backgroundImage = cssUrl(url);
+    w.classList.add('on');
+  }, () => {});
 }
 function setMasterUI() {
   const v = Math.round(cur.volume * 100);
@@ -354,6 +386,7 @@ async function doSave(manual) {
       immersion: { effect: c.effect, background: c.background, pixelArt: !!c.pixel, fill: !!c.fill }, tracks: c.tracks.map(toJson) };
     if (c.description) data.description = c.description;
     if (c.archived) data.archived = true;
+    if (c.coverBg && c.cover) data.coverAsBackground = true;
     await writeFile(c.file, JSON.stringify(data, null, 2));
     if (c.renamedFrom) {
       const [d, n] = split(c.renamedFrom); c.renamedFrom = null;
