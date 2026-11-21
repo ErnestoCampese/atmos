@@ -7,7 +7,7 @@
    When a new version is published, the page itself is fetched from the network first, so anyone
    who already has the app gets the new one as soon as they are online. */
 
-const VERSION = 'atmos-v56';
+const VERSION = 'atmos-v57';
 const SHELL = [
   './',
   'index.html',
@@ -84,7 +84,8 @@ self.addEventListener('fetch', e => {
   e.respondWith((async () => {
     const hit = await caches.match(req);
     const live = fetch(req).then(res => {
-      if (res && res.ok) caches.open(VERSION).then(c => c.put(req, res.clone()));
+      // the copy is taken at once: a moment later the page is already reading the answer, and it can no longer be copied
+      if (res && res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)).catch(() => {}); }
       return res;
     }).catch(() => null);
     return hit || (await live) || Response.error();

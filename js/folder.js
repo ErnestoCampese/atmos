@@ -166,8 +166,12 @@ async function boot() {
   if (!h) { show('vWelcome'); welcomeState('first'); reveal(); return; }
   welcomeFolder = h.name;
   // if the browser still remembers the permission, the folder is reopened straight away: no buttons at all
-  let granted = false;
-  try { granted = !!h.queryPermission && await h.queryPermission({ mode: 'readwrite' }) === 'granted'; } catch (e) {}
+  // a browser that never answers must not leave an empty night: after a few seconds the welcome says so
+  let granted = false, silent = false;
+  try {
+    const p = h.queryPermission ? await Promise.race([h.queryPermission({ mode: 'readwrite' }), wait(3000).then(() => 'silent')]) : '';
+    granted = p === 'granted'; silent = p === 'silent';
+  } catch (e) {}
   const returning = () => {
     welcomeState('returning', h.name);
     setTimeout(() => { try { $('reopenBtn').focus(); } catch (e) {} }, 0);
@@ -191,6 +195,7 @@ async function boot() {
   }
   show('vWelcome');
   returning();
+  if (silent) welcomeProblem(`Your browser didn’t answer when αtmos asked for ${h.name}. Your files are untouched. Close your browser and open it again, or choose the folder again.`);
   reveal();
 }
 const missingText = name => `${name} can’t be found. It may have been moved, renamed or deleted. Choose it again where it is now.`;
